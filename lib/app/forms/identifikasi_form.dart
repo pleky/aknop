@@ -1,25 +1,20 @@
+import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
-/* Login Form
+/* Identifikasi Form
 |--------------------------------------------------------------------------
 | Usage: https://nylo.dev/docs/6.x/forms#how-it-works
 | Casts: https://nylo.dev/docs/6.x/forms#form-casts
 | Validation Rules: https://nylo.dev/docs/6.x/validation#validation-rules
 |-------------------------------------------------------------------------- */
 
-class LoginForm extends NyFormData {
-  LoginForm({String? name}) : super(name ?? "login");
+class IdentifikasiForm extends NyFormData {
+  IdentifikasiForm({String? name}) : super(name ?? "identifikasi");
 
   @override
   fields() => [
-        Field.email("Email",
-            // autofocus: true,
-            validate: FormValidator.rule("email"),
-            style: "compact"),
-        Field.password(
-          "Password",
-          validate: FormValidator.password(strength: 1),
-          style: "compact",
-        ),
+        Field.text("Judul Masalah", style: "compact"),
+        Field.text("Judul Masalah", style: "compact"),
+        Field.text("Judul Masalah", style: "compact"),
       ];
 }

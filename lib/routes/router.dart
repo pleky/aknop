@@ -1,3 +1,18 @@
+import '/resources/pages/detail_survey_page.dart';
+import '/resources/pages/survey_list_page.dart';
+import '/resources/pages/survey_list_page.dart';
+import '/resources/pages/summary_page.dart';
+import '/resources/pages/volume_penentuan_nilai_page.dart';
+import '/resources/pages/penentuan_nilai_page.dart';
+import '/resources/pages/identifikasi_page.dart';
+import '/resources/pages/drawing_map_page.dart';
+import '/resources/pages/form_survey_page.dart';
+import 'package:flutter_app/routes/guards/logged_in_route_guard.dart';
+
+import '/resources/pages/schedule_page.dart';
+import '/resources/pages/base_navigation_hub.dart';
+import '/resources/pages/login_page.dart';
+import '/resources/pages/landing_page.dart';
 import '/resources/pages/not_found_page.dart';
 import '/resources/pages/home_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -16,7 +31,8 @@ import 'package:nylo_framework/nylo_framework.dart';
 |-------------------------------------------------------------------------- */
 
 appRouter() => nyRoutes((router) {
-      router.add(HomePage.path).initialRoute();
+      router.add(LandingPage.path).initialRoute();
+
       // Add your routes here ...
 
       // router.add(NewPage.path, transition: PageTransitionType.fade);
@@ -28,5 +44,23 @@ appRouter() => nyRoutes((router) {
       // }, (router) {
       //
       // });
+      router.add(LoginPage.path);
+      router.group(
+          () => {
+                'route_guards': [LoggedInRouteGuard()],
+                'prefix': '/dashboard'
+              }, (router) {
+        router.add(BaseNavigationHub.path);
+        router.add(HomePage.path);
+        router.add(SchedulePage.path);
+        router.add(FormSurveyPage.path);
+      });
       router.add(NotFoundPage.path).unknownRoute();
-    });
+      router.add(DrawingMapPage.path);
+      router.add(IdentifikasiPage.path);
+      router.add(PenentuanNilaiPage.path);
+      router.add(VolumePenentuanNilaiPage.path);
+      router.add(SummaryPage.path);
+      router.add(SurveyListPage.path, authenticatedRoute: true);
+      router.add(DetailSurveyPage.path);
+});

@@ -1,7 +1,7 @@
 import '/app/controllers/controller.dart';
 import 'package:flutter/widgets.dart';
 
-class HomeController extends Controller {
+class SummaryController extends Controller {
   
   @override
   construct(BuildContext context) {

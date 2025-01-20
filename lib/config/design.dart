@@ -18,7 +18,7 @@ import 'package:nylo_framework/nylo_framework.dart';
 | You can use any font from Google Fonts library.
 | -------------------------------------------------------------------------- */
 
-final TextStyle appFont = GoogleFonts.outfit();
+final TextStyle appFont = GoogleFonts.poppins();
 // e.g. final TextStyle appThemeFont = GoogleFonts.lato();
 
 /* App Logo
@@ -47,13 +47,11 @@ final Widget loader = const Loader();
 
 Widget getToastNotificationWidget(
     {required ToastNotificationStyleType style,
-    Function(ToastNotificationStyleMetaHelper helper)?
-        toastNotificationStyleMeta,
+    Function(ToastNotificationStyleMetaHelper helper)? toastNotificationStyleMeta,
     Function? onDismiss}) {
   if (toastNotificationStyleMeta == null) return const SizedBox.shrink();
 
-  ToastMeta toastMeta =
-      toastNotificationStyleMeta(NyToastNotificationStyleMetaHelper(style));
+  ToastMeta toastMeta = toastNotificationStyleMeta(NyToastNotificationStyleMetaHelper(style));
 
   return ToastNotification(toastMeta, onDismiss: onDismiss);
 }
