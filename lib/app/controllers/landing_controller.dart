@@ -58,6 +58,7 @@ class LandingController extends Controller {
                     ),
                     FormBuilderTextField(
                       name: 'password',
+                      obscureText: true,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(),
                         label: Text('Password'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/resources/pages/base_navigation_hub.dart';
+import 'package:flutter_app/resources/pages/survey_list_page.dart';
 import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/summary_controller.dart';
@@ -98,7 +99,7 @@ class _SummaryPageState extends NyState<SummaryPage> {
               Button.primary(
                 text: 'Simpan Perhitungan',
                 onPressed: () {
-                  routeTo(BaseNavigationHub.path, navigationType: NavigationType.pushAndForgetAll);
+                  routeTo(SurveyListPage.path, navigationType: NavigationType.pushAndForgetAll);
                 },
               ),
             ],

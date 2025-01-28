@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/base.dart';
+import 'package:flutter_app/app/models/hsp.dart';
 import '/config/decoders.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
@@ -37,6 +38,30 @@ class MasterApiService extends NyApiService {
   Future<List<Base>?> getAllSarpra(int id) async {
     return await network<List<Base>>(
       request: (api) => api.get('/list/sarpra/$id'),
+    );
+  }
+
+  Future<List<Base>?> getAllBagianBangunan() async {
+    return await network<List<Base>>(
+      request: (api) => api.get('/list/bagian-bangunan/1'),
+    );
+  }
+
+  Future<List<Base>?> getAllKondisi() async {
+    return await network<List<Base>>(
+      request: (api) => api.get('/list/kondisi'),
+    );
+  }
+
+  Future<List<Base>?> getAllSubPekerjaan() async {
+    return await network<List<Base>>(
+      request: (api) => api.get('/list/sub-pekerjaan'),
+    );
+  }
+
+  Future<List<Hsp>?> getAllHSP(int id) async {
+    return await network<List<Hsp>>(
+      request: (api) => api.get('/list/hsp/$id'),
     );
   }
 }

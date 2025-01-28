@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/models/survey.dart';
+import 'package:flutter_app/app/networking/transaction_api_service.dart';
 import 'package:flutter_app/resources/pages/detail_survey_page.dart';
 import 'package:flutter_app/resources/pages/form_survey_page.dart';
 import 'package:flutter_app/resources/widgets/bootstrap_input_widget.dart';
+import 'package:intl/intl.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/survey_list_controller.dart';
 
@@ -17,6 +20,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
 
   late ScrollController _scrollController;
   bool _isPinned = false;
+  List<Survey> surveys = [];
 
   @override
   void initState() {
@@ -36,7 +40,16 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
   }
 
   @override
-  get init => () {};
+  get init => () async {
+        await api<TransactionApiService>(
+          (request) => request.getAllSurvey(),
+          onSuccess: (response, data) {
+            setState(() {
+              surveys = data;
+            });
+          },
+        );
+      };
 
   @override
   Widget view(BuildContext context) {
@@ -117,10 +130,11 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                 itemBuilder: (context, index) {
                   return ListTile(
                     tileColor: Color(0xFFebedf0),
-                    title: Text(controller.surveys[index]['name'].toString()),
-                    subtitle: Text(controller.surveys[index]['date'].toString()),
+                    title: Text(surveys[index].judul ?? ''),
+                    subtitle:
+                        Text(DateFormat('dd MMM yyyy').format(DateTime.parse(surveys[index].created_at!)).toString()),
                     onTap: () => routeTo(DetailSurveyPage.path),
-                    trailing: controller.surveys[index]['completed'] == false
+                    trailing: surveys[index].status != 'COMPLETED'
                         ? Icon(
                             Icons.circle,
                             color: Color(0xFFd9d9d9),
@@ -132,7 +146,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                   );
                 },
                 separatorBuilder: (context, index) => SizedBox(height: 6),
-                itemCount: controller.surveys.length,
+                itemCount: surveys.length,
               ),
             ),
           ],

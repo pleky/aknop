@@ -1,7 +1,12 @@
+import 'package:flutter_app/app/controllers/summary_controller.dart';
+
+import '/app/models/hsp.dart';
+import '/app/models/survey.dart';
 import 'package:flutter_app/app/controllers/detail_survey_controller.dart';
 import 'package:flutter_app/app/controllers/drawing_map_controller.dart';
 import 'package:flutter_app/app/controllers/form_survey_controller.dart';
 import 'package:flutter_app/app/controllers/landing_controller.dart';
+import 'package:flutter_app/app/controllers/penentuan_nilai_controller.dart';
 import 'package:flutter_app/app/controllers/survey_list_controller.dart';
 
 import '/app/networking/master_api_service.dart';
@@ -9,6 +14,7 @@ import '/app/models/base.dart';
 import '/app/controllers/home_controller.dart';
 import '/app/models/user.dart';
 import '/app/networking/api_service.dart';
+import '/app/networking/transaction_api_service.dart';
 
 /* Model Decoders
 |--------------------------------------------------------------------------
@@ -28,6 +34,14 @@ final Map<Type, dynamic> modelDecoders = {
   List<Base>: (data) => List.from(data).map((json) => Base.fromJson(json)).toList(),
 
   Base: (data) => Base.fromJson(data),
+
+  List<Hsp>: (data) => List.from(data).map((json) => Hsp.fromJson(json)).toList(),
+
+  Hsp: (data) => Hsp.fromJson(data),
+
+  List<Survey>: (data) => List.from(data['data']).map((json) => Survey.fromJson(json)).toList(),
+
+  Survey: (data) => Survey.fromJson(data),
 };
 
 /* API Decoders
@@ -44,6 +58,7 @@ final Map<Type, dynamic> apiDecoders = {
   // ...
 
   MasterApiService: MasterApiService(),
+  TransactionApiService: () => TransactionApiService()
 };
 
 /* Controller Decoders
@@ -59,5 +74,7 @@ final Map<Type, dynamic> controllers = {
   FormSurveyController: () => FormSurveyController(),
   DrawingMapController: () => DrawingMapController(),
   DetailSurveyController: () => DetailSurveyController(),
+  PenentuanNilaiController: () => PenentuanNilaiController(),
+  SummaryController: () => SummaryController(),
   // ...
 };

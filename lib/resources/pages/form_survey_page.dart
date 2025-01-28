@@ -1,14 +1,20 @@
+import 'dart:convert';
+
 import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/forms/survey_form.dart';
 import 'package:flutter_app/app/models/base.dart';
 import 'package:flutter_app/app/networking/master_api_service.dart';
+import 'package:flutter_app/app/networking/transaction_api_service.dart';
 import 'package:flutter_app/bootstrap/extensions.dart';
 import 'package:flutter_app/resources/pages/drawing_map_page.dart';
+import 'package:flutter_app/resources/pages/identifikasi_page.dart';
 import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:flutter_app/resources/widgets/my_dropdown.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/form_survey_controller.dart';
@@ -98,7 +104,6 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
   }
 
   final _formKey = GlobalKey<FormBuilderState>();
-  List<String> wSungai = ['Brantas', 'Brintis', 'Bruntus'];
 
   @override
   Widget view(BuildContext context) {
@@ -123,6 +128,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
         minimum: EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: FormBuilder(
+            autovalidateMode: AutovalidateMode.onUnfocus,
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,33 +139,54 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                 FormBuilderTextField(
                   name: "judul",
                   maxLines: 3,
+                  validator: FormBuilderValidators.required(errorText: 'Judul Survey tidak boleh kosong'),
                   decoration: InputDecoration(
                     isDense: true,
                     border: OutlineInputBorder(),
                   ),
                 ),
                 Text('Lokasi Saat Ini'),
-                FormBuilderTextField(
-                  name: "lokasi",
-                  readOnly: true,
-                  onTap: () {
-                    routeTo(DrawingMapPage.path);
+                FormBuilderField<List<List<double>>>(
+                  name: 'lokasi',
+                  validator: FormBuilderValidators.required(errorText: 'Lokasi tidak boleh kosong'),
+                  builder: (field) {
+                    return TextField(
+                      onTap: () {
+                        routeTo(
+                          DrawingMapPage.path,
+                          data: field.value,
+                          result: true,
+                          onPop: (value) {
+                            if (value != null) {
+                              print(value);
+                              _formKey.currentState?.fields['lokasi']?.didChange(value);
+                            }
+                          },
+                        );
+                      },
+                      decoration: InputDecoration(
+                        isDense: true,
+                        suffixIcon: Icon(
+                          Icons.location_on_outlined,
+                          color: Colors.black,
+                        ),
+                        hintText: 'Tandai Lokasi',
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.black),
+                        ),
+                        error: field.errorText != null
+                            ? Text(field.errorText ?? '').setStyle(TextStyle(color: Colors.red, fontSize: 12))
+                            : null,
+                      ),
+                    );
                   },
-                  decoration: InputDecoration(
-                    isDense: true,
-                    suffixIcon: Icon(
-                      Icons.location_on_outlined,
-                      color: Colors.black,
-                    ),
-                    hintText: 'Tandai Lokasi',
-                    border: OutlineInputBorder(),
-                  ),
                 ),
                 Text('WSungai'),
                 MyDropdownField(
                   controller: wSungaiController,
                   dataDropdown: wilayahSungai,
                   name: 'wSungai',
+                  errorText: 'Wilayah Sungai tidak boleh kosong',
                   enable: true,
                   placeholder: 'Pilih Wilayah Sungai',
                   onSelected: (item) {
@@ -177,12 +204,14 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                   name: 'sungai',
                   placeholder: 'Pilih Sungai',
                   enable: sungai.isNotEmpty,
+                  errorText: 'Sungai tidak boleh kosong',
                   onSelected: (item) {},
                 ),
                 Text('AKNOP'),
                 MyDropdownField(
                   controller: aknopController,
                   dataDropdown: aknop,
+                  errorText: 'Aknop tidak boleh kosong',
                   name: 'aknop',
                   placeholder: 'Aknop',
                   enable: true,
@@ -196,6 +225,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                 ),
                 Text('Sarana Prasarana'),
                 MyDropdownField(
+                  errorText: 'Sarpra tidak boleh kosong',
                   controller: sarpraController,
                   dataDropdown: sarpra,
                   name: 'sarpra',
@@ -226,9 +256,58 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                         return BorderSide(color: Color(0xFF61eabc));
                       },
                     )),
-                    onPressed: () {
+                    onPressed: () async {
                       _formKey.currentState?.saveAndValidate();
-                      print(_formKey.currentState?.value);
+                      if (_formKey.currentState?.validate() ?? false) {
+                        final data = _formKey.currentState!.value;
+                        final payload = {
+                          'title': 'Tambah',
+                          'step': 1,
+                          'survey': data['judul'],
+                          'wsungai': data['wSungai'].data.id,
+                          'sungai': data['sungai'].data.id,
+                          'aknop': data['aknop'].data.id,
+                          'sarpra': data['sarpra'].data.id,
+                          'currentLocation': '${data['lokasi'][0][0]},${data['lokasi'][0][1]}',
+                          // 'currentLocation': "-8.0364839,112.6571827",
+                          'polygon': jsonEncode({'coordinates': data['lokasi']}),
+                          'year': data['year'].toString().substring(0, 4),
+                        };
+                        debugPrint("payload =>>>>>>>> $payload");
+
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return Center(
+                              child: Container(
+                                padding: EdgeInsets.all(30),
+                                width: MediaQuery.of(context).size.width * 0.5,
+                                height: MediaQuery.of(context).size.width * 0.5,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          },
+                        );
+
+                        await api<TransactionApiService>(
+                          (request) => request.saveStep1(payload),
+                          onSuccess: (response, data) {
+                            pop();
+                            routeTo(IdentifikasiPage.path);
+                          },
+                          onError: (dioException) {
+                            pop();
+                            showToastDanger(description: 'Gagal menyimpan data');
+                          },
+                        );
+
+                        // routeTo(SurveyListPage.path, navigationType: NavigationType.pushReplace);
+                      }
+                      //
                     },
                   ),
                 ),
