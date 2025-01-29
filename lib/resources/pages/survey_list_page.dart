@@ -56,100 +56,105 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
     return Scaffold(
       body: SafeArea(
         top: true,
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 150.0, // Height when expanded
-              floating: true, // AppBar doesn't float
-              pinned: true,
-              // AppBar remains pinned when collapsed
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: EdgeInsets.all(16),
-                title: Text(
-                  'Daftar Survey',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(color: _isPinned ? Colors.white : Colors.black),
-                ),
-                centerTitle: false,
-                background: Container(
-                  color: Colors.white,
-                  child: Container(
-                    padding: EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 8,
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.rectangle,
-                            borderRadius: BorderRadius.circular(8),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            reboot();
+          },
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 150.0, // Height when expanded
+                floating: true, // AppBar doesn't float
+                pinned: true,
+                // AppBar remains pinned when collapsed
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: EdgeInsets.all(16),
+                  title: Text(
+                    'Daftar Survey',
+                    textAlign: TextAlign.left,
+                    style: TextStyle(color: _isPinned ? Colors.white : Colors.black),
+                  ),
+                  centerTitle: false,
+                  background: Container(
+                    color: Colors.white,
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 8,
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.rectangle,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            clipBehavior: Clip.hardEdge,
+                            child: Image.network(
+                              'https://picsum.photos/100/100',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.contain,
+                            ),
                           ),
-                          clipBehavior: Clip.hardEdge,
-                          child: Image.network(
-                            'https://picsum.photos/100/100',
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Aria').bodyLarge(),
-                            Text('Folunter'),
-                          ],
-                        )
-                      ],
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Aria').bodyLarge(),
+                              Text('Folunter'),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Search',
-                    isDense: true,
-                    prefixIcon: Icon(Icons.search),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Search',
+                      isDense: true,
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (value) {
+                      print(value);
+                    },
                   ),
-                  onChanged: (value) {
-                    print(value);
-                  },
                 ),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.all(8.0),
-              sliver: SliverList.separated(
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    tileColor: Color(0xFFebedf0),
-                    title: Text(surveys[index].judul ?? ''),
-                    subtitle:
-                        Text(DateFormat('dd MMM yyyy').format(DateTime.parse(surveys[index].created_at!)).toString()),
-                    onTap: () => routeTo(DetailSurveyPage.path),
-                    trailing: surveys[index].status != 'COMPLETED'
-                        ? Icon(
-                            Icons.circle,
-                            color: Color(0xFFd9d9d9),
-                          )
-                        : Icon(
-                            Icons.check_circle_outline,
-                            color: Colors.green,
-                          ),
-                  );
-                },
-                separatorBuilder: (context, index) => SizedBox(height: 6),
-                itemCount: surveys.length,
+              SliverPadding(
+                padding: const EdgeInsets.all(8.0),
+                sliver: SliverList.separated(
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      tileColor: Color(0xFFebedf0),
+                      title: Text(surveys[index].judul ?? ''),
+                      subtitle:
+                          Text(DateFormat('dd MMM yyyy').format(DateTime.parse(surveys[index].created_at!)).toString()),
+                      onTap: () => routeTo(DetailSurveyPage.path),
+                      trailing: surveys[index].status != 'COMPLETED'
+                          ? Icon(
+                              Icons.circle,
+                              color: Color(0xFFd9d9d9),
+                            )
+                          : Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.green,
+                            ),
+                    );
+                  },
+                  separatorBuilder: (context, index) => SizedBox(height: 6),
+                  itemCount: surveys.length,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.small(
