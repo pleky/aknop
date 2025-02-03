@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/models/detail.dart';
+import 'package:flutter_app/app/networking/transaction_api_service.dart';
+import 'package:flutter_app/resources/pages/form_survey_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/detail_survey_controller.dart';
 
@@ -11,9 +14,19 @@ class DetailSurveyPage extends NyStatefulWidget<DetailSurveyController> {
 class _DetailSurveyPageState extends NyState<DetailSurveyPage> {
   /// [DetailSurveyController] controller
   DetailSurveyController get controller => widget.controller;
+  DetailModel? _detail;
 
   @override
-  get init => () {};
+  get init => () async {
+        await api<TransactionApiService>(
+          (request) => request.detailSurvey(widget.data()),
+          onSuccess: (response, data) {
+            setState(() {
+              _detail = DetailModel.fromJson(data['data']);
+            });
+          },
+        );
+      };
 
   @override
   Widget view(BuildContext context) {
@@ -40,17 +53,17 @@ class _DetailSurveyPageState extends NyState<DetailSurveyPage> {
             spacing: 6,
             children: [
               Text('Judul Survey :').displaySmall().setFontSize(14),
-              Text('PENCEMARAN SUNGAI BRANTAS').bodyMedium().setFontSize(14),
+              Text(_detail?.stepOne?.judul ?? '').bodyMedium().setFontSize(14),
               Text('Wilayah Sungai :').displaySmall().setFontSize(14),
-              Text('-123123, 123123').bodyMedium().setFontSize(14),
+              Text('${_detail?.stepOne?.latitude}, ${_detail?.stepOne?.longitude}').bodyMedium().setFontSize(14),
               Text('Sungai :').displaySmall().setFontSize(14),
-              Text('Kali Solo').bodyMedium().setFontSize(14),
+              Text('${_detail?.stepOne?.vSungai}').bodyMedium().setFontSize(14),
               Text('AKNOP :').displaySmall().setFontSize(14),
-              Text('SUNGAI').bodyMedium().setFontSize(14),
+              Text('${_detail?.stepOne?.vJenisAknop}').bodyMedium().setFontSize(14),
               Text('Sarana Prasarana :').displaySmall().setFontSize(14),
-              Text('Sungai Alami').bodyMedium().setFontSize(14),
+              Text('${_detail?.stepOne?.vJenisSarpra}').bodyMedium().setFontSize(14),
               Text('Pelaksana :').displaySmall().setFontSize(14),
-              Text('Superadmin').bodyMedium().setFontSize(14),
+              Text('${_detail?.stepOne?.vPelaksana}').bodyMedium().setFontSize(14),
               Spacer(),
               SizedBox(
                 width: double.infinity,
@@ -63,7 +76,9 @@ class _DetailSurveyPageState extends NyState<DetailSurveyPage> {
                       return BorderSide(color: Color(0xFF61eabc));
                     },
                   )),
-                  onPressed: () {},
+                  onPressed: () {
+                    routeTo(FormSurveyPage.path, data: _detail?.stepOne?.id);
+                  },
                 ),
               ),
             ],

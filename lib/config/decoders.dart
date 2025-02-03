@@ -1,4 +1,5 @@
 import 'package:flutter_app/app/controllers/summary_controller.dart';
+import 'package:flutter_app/app/models/detail.dart';
 
 import '/app/models/hsp.dart';
 import '/app/models/survey.dart';
@@ -13,6 +14,7 @@ import '/app/networking/master_api_service.dart';
 import '/app/models/base.dart';
 import '/app/controllers/home_controller.dart';
 import '/app/models/user.dart';
+import '/app/models/detail.dart';
 import '/app/networking/api_service.dart';
 import '/app/networking/transaction_api_service.dart';
 
@@ -42,6 +44,8 @@ final Map<Type, dynamic> modelDecoders = {
   List<Survey>: (data) => List.from(data['data']).map((json) => Survey.fromJson(json)).toList(),
 
   Survey: (data) => Survey.fromJson(data),
+  String: (data) => data,
+  DetailModel: (data) => DetailModel.fromJson(data),
 };
 
 /* API Decoders

@@ -12,7 +12,7 @@
 
 
     <application
-        android:label="Nylo"
+        android:label="AKNOP PJT1"
         android:name="${applicationName}"
         android:allowBackup="false"
         android:fullBackupContent="false"

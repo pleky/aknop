@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/forms/identifikasi_form.dart';
 import 'package:flutter_app/app/models/base.dart';
+import 'package:flutter_app/app/models/detail.dart';
 import 'package:flutter_app/app/networking/master_api_service.dart';
+import 'package:flutter_app/app/networking/transaction_api_service.dart';
 import 'package:flutter_app/resources/pages/penentuan_nilai_page.dart';
 import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:flutter_app/resources/widgets/my_dropdown.dart';
@@ -21,17 +23,24 @@ class IdentifikasiPage extends NyStatefulWidget {
 class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
   List<SelectedListItem<Base>> bagianBangunan = [];
   List<SelectedListItem<Base>> kondisi = [];
+  late int surveyId;
 
-  var formStates = [
-    {
+  var formStates = {
+    0: {
       'controllerBagian': TextEditingController(),
       'controllerFungsi': TextEditingController(),
       'controllerFisik': TextEditingController(),
     }
-  ];
+  };
+
+  var totalForm = 1;
+  var images = [];
+
+  Map<String, dynamic> initialValues = {};
 
   @override
   get init => () async {
+        surveyId = widget.data();
         await api<MasterApiService>(
           (request) => request.getAllBagianBangunan(),
           onSuccess: (response, data) {
@@ -44,7 +53,6 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
             });
           },
         );
-
         await api<MasterApiService>(
           (request) => request.getAllKondisi(),
           onSuccess: (response, data) {
@@ -57,11 +65,56 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
             });
           },
         );
+
+        await api<TransactionApiService>(
+          (request) => request.detailSurvey(surveyId),
+          onSuccess: (response, data) {
+            final DetailModel _res = DetailModel.fromJson(data['data']);
+            var _data = _res.stepTwo;
+
+            if (_data != null && _data.isNotEmpty) {
+              var _form = _data[0];
+              formStates[0] = {
+                'controllerBagian': TextEditingController(text: _form.bagianBangunan),
+                'controllerFungsi': TextEditingController(text: _form.vKondisiFungsi),
+                'controllerFisik': TextEditingController(text: _form.vKondisiFisik),
+              };
+
+              for (var i = 1; i < _data.length; i++) {
+                var _form = _data[i];
+                formStates[i] = {
+                  'controllerBagian': TextEditingController(text: _form.bagianBangunan),
+                  'controllerFungsi': TextEditingController(text: _form.vKondisiFungsi),
+                  'controllerFisik': TextEditingController(text: _form.vKondisiFisik),
+                };
+              }
+
+              setState(() {
+                totalForm = _data.length;
+              });
+
+              _data.forEach((element) {
+                setState(() {
+                  images.add(element.buktiSurvey);
+                });
+              });
+
+              for (var i = 0; i < _data.length; i++) {
+                initialValues['judul-$i'] = _data[i].masalah;
+                initialValues['tindakan-$i'] = _data[i].tindakan;
+                initialValues['fungsi-$i'] =
+                    SelectedListItem(data: Base(id: _data[i].kondisiFungsi, nama: _data[i].vKondisiFungsi));
+                initialValues['fisik-$i'] =
+                    SelectedListItem(data: Base(id: _data[i].kondisiFisik, nama: _data[i].vKondisiFisik));
+                initialValues['bagian-$i'] =
+                    SelectedListItem(data: Base(id: _data[i].idBagianBangunan, nama: _data[i].bagianBangunan));
+              }
+            }
+          },
+        );
       };
 
   final _formKey = GlobalKey<FormBuilderState>();
-
-  int totalForm = 1;
 
   @override
   Widget view(BuildContext context) {
@@ -86,6 +139,7 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
       body: SafeArea(
         child: FormBuilder(
           key: _formKey,
+          initialValue: initialValues,
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: ConstrainedBox(
@@ -102,32 +156,121 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                       Fields(
                         index: i,
                         bagianBangunan: bagianBangunan,
+                        initialImages: images,
                         formStates: formStates,
                         kondisi: kondisi,
-                        onDelete: () {
+                        onUpload: (imgUrl) {
+                          print(imgUrl);
+
+                          // print(images);
+                          // print(images.isEmpty);
+                          // print(images[i]);
+
+                          // if (images.isEmpty) {
+                          //   setState(() {
+                          //     images.add(imgUrl);
+                          //   });
+                          // } else {
+
+                          // }
+
+                          if (images.length > i) {
+                            setState(() {
+                              images[i] = imgUrl;
+                            });
+                          } else {
+                            setState(() {
+                              images.add(imgUrl);
+                            });
+                          }
+                        },
+                        onDelete: (fieldIndex) {
                           setState(() {
                             totalForm--;
-                            formStates.removeAt(i);
                           });
                         },
                       ),
                     ButtonAddBagian(
                       onTap: () {
                         setState(() {
-                          totalForm++;
-                          formStates.add({
+                          formStates[totalForm] = {
                             'controllerBagian': TextEditingController(),
                             'controllerFungsi': TextEditingController(),
                             'controllerFisik': TextEditingController(),
-                          });
+                          };
+                          totalForm++;
                         });
                       },
                     ),
                     Spacer(),
                     Button.rounded(
                       text: 'Simpan Data',
-                      onPressed: () {
-                        routeTo(PenentuanNilaiPage.path);
+                      onPressed: () async {
+                        // routeTo();
+                        _formKey.currentState?.saveAndValidate();
+                        if (_formKey.currentState?.validate() ?? false) {
+                          final data = _formKey.currentState!.value;
+                          var payload = {
+                            "title": "Tambah",
+                            "step": 2,
+                            "id_survey": surveyId,
+                          };
+
+                          var masalah = [];
+                          var tindakan = [];
+                          var fisik = [];
+                          var fungsi = [];
+                          var bangunan = [];
+
+                          for (var i = 0; i < totalForm; i++) {
+                            masalah.add(data['judul-$i']);
+                            tindakan.add(data['tindakan-$i']);
+                            fungsi.add(data['fungsi-$i'].data.id);
+                            fisik.add(data['fisik-$i'].data.id);
+                            bangunan.add(data['bagian-$i'].data.id);
+                          }
+
+                          payload['masalah'] = masalah;
+                          payload['tindakan'] = tindakan;
+                          payload['kondisiFungsi'] = fungsi;
+                          payload['kondisiFisik'] = fisik;
+                          payload['bagianbagunan'] = bangunan;
+                          payload['bukti_survey'] = images;
+
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return Center(
+                                child: Container(
+                                  padding: EdgeInsets.all(30),
+                                  width: MediaQuery.of(context).size.width * 0.5,
+                                  height: MediaQuery.of(context).size.width * 0.5,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            },
+                          );
+
+                          await api<TransactionApiService>(
+                            (request) => request.saveStep2(payload),
+                            onSuccess: (response, _data) {
+                              pop();
+                              routeTo(
+                                PenentuanNilaiPage.path,
+                                data: surveyId,
+                                navigationType: NavigationType.pushReplace,
+                              );
+                            },
+                            onError: (dioException) {
+                              pop();
+                              showToastDanger(description: 'Gagal menyimpan data');
+                            },
+                          );
+                        }
                       },
                     ),
                     SizedBox(height: 16),
@@ -150,13 +293,17 @@ class Fields extends StatefulWidget {
     required this.bagianBangunan,
     required this.kondisi,
     required this.onDelete,
+    required this.onUpload,
+    required this.initialImages,
   });
 
   final int index;
-  final List<Map<String, dynamic>> formStates;
+  final Map<int, dynamic> formStates;
   final List<SelectedListItem<Base>> bagianBangunan;
   final List<SelectedListItem<Base>> kondisi;
-  final VoidCallback onDelete;
+  final List initialImages;
+  final Function(String) onUpload;
+  final Function(int) onDelete;
 
   @override
   State<Fields> createState() => _FieldsState();
@@ -164,9 +311,13 @@ class Fields extends StatefulWidget {
 
 class _FieldsState extends State<Fields> {
   var images = [];
+  String imgUrl = '';
 
-  String _getFileName(String path) {
-    return path.split('/').last;
+  @override
+  void initState() {
+    // images = widget.initialImages;
+    // imgUrl = widget.initialImages.isNotEmpty ? widget.initialImages[widget.index] ?? '' : '';
+    super.initState();
   }
 
   @override
@@ -186,7 +337,7 @@ class _FieldsState extends State<Fields> {
             visible: widget.index != 0,
             child: IconButton(
               icon: Icon(Icons.delete),
-              onPressed: widget.onDelete,
+              onPressed: () => widget.onDelete.call(widget.index),
             ),
           ),
         ]),
@@ -221,169 +372,16 @@ class _FieldsState extends State<Fields> {
                   WoltModalSheetPage(
                     hasTopBarLayer: false,
                     forceMaxHeight: true,
-                    child: StatefulBuilder(
-                      builder: (context, _setState) {
-                        final ImagePicker _picker = ImagePicker();
-                        var _tempImages = images;
-                        debugPrint('images: $images');
-                        debugPrint('_tempImages: $_tempImages');
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.close),
-                              onPressed: () {
-                                setState(() {
-                                  images = _tempImages;
-                                });
-                                Navigator.pop(context);
-                              },
-                            ),
-                            Center(
-                              child: RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
-                                  text: 'Format gambar yang dapat di kirim hanya\n',
-                                  children: [
-                                    TextSpan(text: 'berupa'),
-                                    TextSpan(text: ' .jpg, .jpeg, .png', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    TextSpan(text: ' dan ukuran file\n'),
-                                    TextSpan(text: 'maksimal 10Mb', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ],
-                                  style: TextStyle(color: Colors.black),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 20),
-                            InkWell(
-                              onTap: () {
-                                WoltModalSheet.show(
-                                  context: context,
-                                  modalTypeBuilder: (context) => WoltModalType.dialog(),
-                                  useSafeArea: false,
-                                  pageListBuilder: (context) {
-                                    return [
-                                      WoltModalSheetPage(
-                                        hasTopBarLayer: false,
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            ListTile(
-                                              title: Text('Kamera'),
-                                              onTap: () async {
-                                                final XFile? photo =
-                                                    await _picker.pickImage(source: ImageSource.camera);
-                                                if (photo != null) {
-                                                  _setState(() {
-                                                    _tempImages.add(photo.path);
-                                                  });
-                                                  Navigator.pop(context);
-                                                }
-                                              },
-                                            ),
-                                            ListTile(
-                                              title: Text('Galeri'),
-                                              onTap: () async {
-                                                final XFile? photo =
-                                                    await _picker.pickImage(source: ImageSource.gallery);
-                                                if (photo != null) {
-                                                  _setState(() {
-                                                    _tempImages.add(photo.path);
-                                                  });
-                                                  Navigator.pop(context);
-                                                }
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ];
-                                  },
-                                );
-                              },
-                              child: Center(
-                                child: DottedBorder(
-                                  dashPattern: [3],
-                                  radius: Radius.circular(8),
-                                  color: Colors.blueAccent.shade700,
-                                  borderType: BorderType.RRect,
-                                  child: Container(
-                                    height: 100,
-                                    width: 200,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.grey.withValues(alpha: 100),
-                                          spreadRadius: 0.5,
-                                          blurRadius: 5,
-                                          offset: Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.add,
-                                        color: Colors.blueAccent.shade700,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 30),
-                            SizedBox(
-                              height: 300,
-                              child: ListView.separated(
-                                padding: EdgeInsets.symmetric(horizontal: 24),
-                                physics: NeverScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                itemBuilder: (context, index) => Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(_getFileName(images[index])).bodySmall(),
-                                    ),
-                                    SizedBox(width: 8),
-                                    IconButton(
-                                      icon: Icon(Icons.close, color: Colors.red),
-                                      onPressed: () {
-                                        _setState(() {
-                                          _tempImages.removeAt(index);
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                itemCount: images.length,
-                                separatorBuilder: (context, index) => Divider(color: Colors.black),
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                child: Text('Simpan').titleMedium(color: Colors.black, fontWeight: FontWeight.w600),
-                                style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                                    return Color(0xFF61eabc);
-                                  }),
-                                  side: WidgetStateBorderSide.resolveWith(
-                                    (states) {
-                                      return BorderSide(color: Colors.black);
-                                    },
-                                  ),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    images = _tempImages;
-                                  });
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ),
-                          ],
-                        );
+                    child: UploadModal(
+                      images: images.isEmpty ? [] : [images[widget.index]],
+                      onClose: (p0) {},
+                      onUpload: (imgUrl, imgs) {
+                        setState(() {
+                          imgUrl = imgUrl;
+                          images = imgs;
+                        });
+
+                        widget.onUpload(imgUrl);
                       },
                     ),
                   )
@@ -481,6 +479,250 @@ class ButtonAddBagian extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class UploadModal extends StatefulWidget {
+  final List images;
+  final Function(String, List) onUpload;
+  final Function(List) onClose;
+
+  const UploadModal({
+    required this.images,
+    required this.onUpload,
+    required this.onClose,
+  });
+
+  @override
+  _UploadModalState createState() => _UploadModalState();
+}
+
+class _UploadModalState extends State<UploadModal> {
+  bool isLoading = false;
+
+  Future<void> upload() async {
+    if (_tempImages.first.contains('http')) {
+      widget.onUpload(_tempImages.first, _tempImages);
+      Navigator.pop(context);
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    await api<TransactionApiService>(
+      (request) => request.upload(File(_tempImages.first)),
+      onSuccess: (response, data) {
+        widget.onUpload(data['data'], _tempImages);
+        setState(() {
+          isLoading = false;
+        });
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  String _getFileName(String? path) {
+    if (path == null) return '';
+
+    return path.split('/').last;
+  }
+
+  List _tempImages = [];
+
+  @override
+  void initState() {
+    _tempImages = widget.images;
+    super.initState();
+  }
+
+  ImagePicker _picker = ImagePicker();
+
+  Widget renderImageFileOrNetwork(String imgUrl) {
+    if (imgUrl.contains('http')) {
+      return Image.network(imgUrl, width: 200, height: 200, fit: BoxFit.cover);
+    } else {
+      return Image.file(File(imgUrl), width: 200, height: 200, fit: BoxFit.cover);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IconButton(
+          icon: Icon(Icons.close),
+          onPressed: () {
+            widget.onClose.call(_tempImages);
+            Navigator.pop(context);
+          },
+        ),
+        Center(
+          child: RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              text: 'Format gambar yang dapat di kirim hanya\n',
+              children: [
+                TextSpan(text: 'berupa'),
+                TextSpan(text: ' .jpg, .jpeg, .png', style: TextStyle(fontWeight: FontWeight.bold)),
+                TextSpan(text: ' dan ukuran file\n'),
+                TextSpan(text: 'maksimal 10Mb', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+        ),
+        SizedBox(height: 20),
+        InkWell(
+          onTap: () {
+            WoltModalSheet.show(
+              context: context,
+              modalTypeBuilder: (context) => WoltModalType.dialog(),
+              useSafeArea: false,
+              pageListBuilder: (context) {
+                return [
+                  WoltModalSheetPage(
+                    hasTopBarLayer: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          title: Text('Kamera'),
+                          onTap: () async {
+                            final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                            if (photo != null) {
+                              if (_tempImages.isNotEmpty) {
+                                setState(() {
+                                  _tempImages.removeLast();
+                                  _tempImages.add(photo.path);
+                                });
+                              } else {
+                                setState(() {
+                                  _tempImages.add(photo.path);
+                                });
+                              }
+                              Navigator.pop(context);
+                            }
+                          },
+                        ),
+                        ListTile(
+                          title: Text('Galeri'),
+                          onTap: () async {
+                            final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
+                            if (photo != null) {
+                              if (_tempImages.isNotEmpty) {
+                                setState(() {
+                                  _tempImages.removeLast();
+                                  _tempImages.add(photo.path);
+                                });
+                              } else {
+                                setState(() {
+                                  _tempImages.add(photo.path);
+                                });
+                              }
+
+                              Navigator.pop(context);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ];
+              },
+            );
+          },
+          child: Center(
+            child: DottedBorder(
+              dashPattern: [3],
+              radius: Radius.circular(8),
+              color: Colors.blueAccent.shade700,
+              borderType: BorderType.RRect,
+              child: Container(
+                height: 200,
+                width: 200,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _tempImages.isNotEmpty
+                    ? renderImageFileOrNetwork(_tempImages.first)
+                    : Center(
+                        child: Icon(
+                          Icons.add,
+                          color: Colors.blueAccent.shade700,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 30),
+        SizedBox(
+          height: 100,
+          child: ListView.separated(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            physics: NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemBuilder: (context, index) => Row(
+              children: [
+                Expanded(
+                  child: Text(_getFileName(_tempImages[index])).bodySmall(),
+                ),
+                SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.close, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _tempImages.removeAt(index);
+                    });
+                  },
+                ),
+              ],
+            ),
+            itemCount: _tempImages.length,
+            separatorBuilder: (context, index) => Divider(color: Colors.black),
+          ),
+        ),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          width: double.infinity,
+          child: OutlinedButton(
+            child: isLoading ? CircularProgressIndicator() : Text('Simpan'),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return Colors.grey.shade300;
+                }
+
+                return Color(0xFF61eabc);
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return Colors.grey.shade500;
+                }
+
+                return Colors.black;
+              }),
+              side: WidgetStateBorderSide.resolveWith(
+                (states) {
+                  WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.disabled)) {
+                      return Colors.grey.shade300;
+                    }
+
+                    return BorderSide(color: Colors.black);
+                  });
+                },
+              ),
+            ),
+            onPressed: isLoading || _tempImages.isEmpty ? null : upload,
+          ),
+        ),
+      ],
     );
   }
 }

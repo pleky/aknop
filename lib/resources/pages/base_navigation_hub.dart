@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/resources/pages/home_page.dart';
 import 'package:flutter_app/resources/widgets/home_tab_widget.dart';
 import 'package:flutter_app/resources/widgets/schedule_tab_widget.dart';
 import 'package:nylo_framework/nylo_framework.dart';

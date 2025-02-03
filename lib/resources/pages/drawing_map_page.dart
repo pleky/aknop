@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ffi';
-import 'dart:math'; // Add this at the top of the file
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/providers/location_provider.dart';
 import 'package:geolocator/geolocator.dart';

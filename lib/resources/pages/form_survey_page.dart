@@ -1,20 +1,16 @@
 import 'dart:convert';
 
-import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/forms/survey_form.dart';
 import 'package:flutter_app/app/models/base.dart';
+import 'package:flutter_app/app/models/detail.dart';
 import 'package:flutter_app/app/networking/master_api_service.dart';
 import 'package:flutter_app/app/networking/transaction_api_service.dart';
-import 'package:flutter_app/bootstrap/extensions.dart';
 import 'package:flutter_app/resources/pages/drawing_map_page.dart';
 import 'package:flutter_app/resources/pages/identifikasi_page.dart';
-import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:flutter_app/resources/widgets/my_dropdown.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/form_survey_controller.dart';
@@ -41,8 +37,8 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
 
   @override
   String? get stateName => 'sungai_state';
-
-  int test = 0;
+  DetailModel? detailModel;
+  Map<String, dynamic> initialValues = {};
 
   @override
   get init => () async {
@@ -71,9 +67,52 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
             });
           },
         );
+
+        if (widget.data() != 'none') {
+          await api<TransactionApiService>(
+            (request) => request.detailSurvey(widget.data()),
+            onSuccess: (response, data) async {
+              if (data['success'] == false) return;
+              final DetailModel _detail = DetailModel.fromJson(data['data']);
+
+              final decodedPolygon = jsonDecode(_detail.stepOne?.polygon ?? '');
+              List<List<double>> polygon =
+                  List<List<double>>.from(decodedPolygon['coordinates'].map((e) => List<double>.from(e)));
+
+              setState(() {
+                initialValues = {
+                  'judul': _detail.stepOne!.judul!,
+                  'lokasi': polygon,
+                  'wSungai': SelectedListItem(
+                    data: Base(id: _detail.stepOne!.wsungai, nama: _detail.stepOne!.vWsungai),
+                  ),
+                  'sungai': SelectedListItem(
+                    data: Base(id: _detail.stepOne!.sungai, nama: _detail.stepOne!.vSungai),
+                  ),
+                  'aknop': SelectedListItem(
+                    data: Base(id: _detail.stepOne!.jenisAknop, nama: _detail.stepOne!.vJenisAknop),
+                  ),
+                  'sarpra': SelectedListItem(
+                    data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
+                  ),
+                  // 'year': DateTime.parse(detailModel!.stepOne!.year!),
+                };
+                detailModel = _detail;
+              });
+
+              wSungaiController.text = detailModel!.stepOne!.vWsungai!;
+              sungaiController.text = detailModel!.stepOne!.vSungai!;
+              aknopController.text = detailModel!.stepOne!.vJenisAknop!;
+              sarpraController.text = detailModel!.stepOne!.vJenisSarpra!;
+
+              await getListSarpra(_detail.stepOne!.jenisAknop);
+              await getListSungai(_detail.stepOne!.wsungai);
+            },
+          );
+        }
       };
 
-  Future<void> getListSungai(int id) async {
+  Future<void> getListSungai(dynamic id) async {
     await api<MasterApiService>(
       (request) => request.getAllSungai(id),
       onSuccess: (response, data) {
@@ -88,7 +127,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
     );
   }
 
-  Future<void> getListSarpra(int id) async {
+  Future<void> getListSarpra(dynamic id) async {
     await api<MasterApiService>(
       (request) => request.getAllSarpra(id),
       onSuccess: (response, data) {
@@ -128,7 +167,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
         minimum: EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: FormBuilder(
-            autovalidateMode: AutovalidateMode.onUnfocus,
+            initialValue: initialValues,
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,7 +197,6 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                           result: true,
                           onPop: (value) {
                             if (value != null) {
-                              print(value);
                               _formKey.currentState?.fields['lokasi']?.didChange(value);
                             }
                           },
@@ -261,7 +299,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                       if (_formKey.currentState?.validate() ?? false) {
                         final data = _formKey.currentState!.value;
                         final payload = {
-                          'title': 'Tambah',
+                          'title': widget.data() != 'none' ? 'Ubah' : 'Tambah',
                           'step': 1,
                           'survey': data['judul'],
                           'wsungai': data['wSungai'].data.id,
@@ -269,11 +307,13 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                           'aknop': data['aknop'].data.id,
                           'sarpra': data['sarpra'].data.id,
                           'currentLocation': '${data['lokasi'][0][0]},${data['lokasi'][0][1]}',
-                          // 'currentLocation': "-8.0364839,112.6571827",
                           'polygon': jsonEncode({'coordinates': data['lokasi']}),
                           'year': data['year'].toString().substring(0, 4),
                         };
-                        debugPrint("payload =>>>>>>>> $payload");
+
+                        if (widget.data() != 'none') {
+                          payload['id_survey'] = widget.data();
+                        }
 
                         showDialog(
                           context: context,
@@ -295,17 +335,19 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
 
                         await api<TransactionApiService>(
                           (request) => request.saveStep1(payload),
-                          onSuccess: (response, data) {
+                          onSuccess: (response, _data) {
                             pop();
-                            routeTo(IdentifikasiPage.path);
+                            routeTo(
+                              IdentifikasiPage.path,
+                              data: _data['data']['id'],
+                              navigationType: NavigationType.pushReplace,
+                            );
                           },
                           onError: (dioException) {
                             pop();
                             showToastDanger(description: 'Gagal menyimpan data');
                           },
                         );
-
-                        // routeTo(SurveyListPage.path, navigationType: NavigationType.pushReplace);
                       }
                       //
                     },

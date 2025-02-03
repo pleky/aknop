@@ -3,7 +3,6 @@ import 'package:flutter_app/app/models/survey.dart';
 import 'package:flutter_app/app/networking/transaction_api_service.dart';
 import 'package:flutter_app/resources/pages/detail_survey_page.dart';
 import 'package:flutter_app/resources/pages/form_survey_page.dart';
-import 'package:flutter_app/resources/widgets/bootstrap_input_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/survey_list_controller.dart';
@@ -137,7 +136,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                       title: Text(surveys[index].judul ?? ''),
                       subtitle:
                           Text(DateFormat('dd MMM yyyy').format(DateTime.parse(surveys[index].created_at!)).toString()),
-                      onTap: () => routeTo(DetailSurveyPage.path),
+                      onTap: () => routeTo(DetailSurveyPage.path, data: surveys[index].id),
                       trailing: surveys[index].status != 'COMPLETED'
                           ? Icon(
                               Icons.circle,
@@ -160,7 +159,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
       floatingActionButton: FloatingActionButton.small(
         child: Icon(Icons.add),
         onPressed: () {
-          routeTo(FormSurveyPage.path);
+          routeTo(FormSurveyPage.path, data: 'none');
         },
       ),
     );

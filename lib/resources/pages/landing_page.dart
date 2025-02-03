@@ -47,7 +47,10 @@ class _LandingPageState extends NyState<LandingPage> {
                   },
                 ),
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.1)
+              SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+              Center(
+                child: Text('Versi 3').bodySmall(color: Colors.white),
+              ),
             ],
           ),
         ),

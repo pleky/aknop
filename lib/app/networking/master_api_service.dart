@@ -23,7 +23,7 @@ class MasterApiService extends NyApiService {
     );
   }
 
-  Future<List<Base>?> getAllSungai(int id) async {
+  Future<List<Base>?> getAllSungai(dynamic id) async {
     return await network<List<Base>>(
       request: (api) => api.get('/list/sungai/$id'),
     );
@@ -35,7 +35,7 @@ class MasterApiService extends NyApiService {
     );
   }
 
-  Future<List<Base>?> getAllSarpra(int id) async {
+  Future<List<Base>?> getAllSarpra(dynamic id) async {
     return await network<List<Base>>(
       request: (api) => api.get('/list/sarpra/$id'),
     );

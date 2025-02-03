@@ -3,13 +3,16 @@ import 'dart:math';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/base.dart';
+import 'package:flutter_app/app/models/detail.dart';
 import 'package:flutter_app/app/models/hsp.dart';
 import 'package:flutter_app/app/networking/master_api_service.dart';
+import 'package:flutter_app/app/networking/transaction_api_service.dart';
 import 'package:flutter_app/resources/pages/summary_page.dart';
 import 'package:flutter_app/resources/pages/volume_penentuan_nilai_page.dart';
 import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:flutter_app/resources/widgets/my_dropdown.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/penentuan_nilai_controller.dart';
 
@@ -27,6 +30,7 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
   List<SelectedListItem<Base>> subPekerjaan = [];
   final _formKey = GlobalKey<FormBuilderState>();
   int totalForm = 1;
+  Map<String, dynamic> initialValues = {};
 
   @override
   get init => () async {
@@ -55,6 +59,31 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
             });
           },
         );
+
+        final surveyId = widget.data();
+
+        // await api<TransactionApiService>(
+        //   (request) => request.detailSurvey(surveyId),
+        //   onSuccess: (response, data) {
+        //     final DetailModel _res = DetailModel.fromJson(data['data']);
+        //     var _data = _res.stepThree;
+
+        //     if (_data != null && _data.isNotEmpty) {
+
+        //       for (var i = 0; i < _data.length; i++) {
+        //         for (var j = 0; j < _data[i].volume.length; j++) {
+        //           initialValues['pekerjaan-$i-$j'] = _data[i].volume[j].toString();
+        //         }
+        //       }
+
+        //       setState(() {
+        //         bagianBangunan = _bagianBangunan;
+        //         subPekerjaan = _subPekerjaan;
+        //         totalForm = _data.length;
+        //       });
+        //     }
+        //   },
+        // );
       };
 
   @override
@@ -80,6 +109,7 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
       body: SafeArea(
         child: FormBuilder(
           key: _formKey,
+          initialValue: initialValues,
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: ConstrainedBox(
@@ -96,6 +126,8 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
                         bagianBangunan: bagianBangunan,
                         subPekerjaan: subPekerjaan,
                         index: i,
+                        controller: controller,
+                        formKey: _formKey,
                         onDelete: () {
                           setState(() {
                             totalForm--;
@@ -112,8 +144,78 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
                     Spacer(),
                     Button.rounded(
                       text: 'Simpan Data',
-                      onPressed: () {
-                        routeTo(SummaryPage.path);
+                      onPressed: () async {
+                        _formKey.currentState?.saveAndValidate();
+
+                        if (_formKey.currentState?.validate() ?? false) {
+                          final data = _formKey.currentState!.value;
+
+                          var _payload = [];
+                          Map<String, dynamic> volume = {};
+                          Map<String, dynamic> hasil = {};
+
+                          for (var i = 0; i < totalForm; i++) {
+                            volume['$i'] = [];
+                            hasil['$i'] = [];
+                            for (var j = 0; j < controller.totalFields['$i']; j++) {
+                              var pekerjaan = data['pekerjaan-$i-$j'];
+                              var satuan = data['satuan-$i-$j'];
+
+                              // Ensure values are not null before adding them
+                              if (pekerjaan != null && pekerjaan != '') {
+                                (volume['$i'] as List).add(pekerjaan);
+                              }
+                              if (satuan != null && satuan != '') {
+                                (hasil['$i'] as List).add(satuan);
+                              }
+                            }
+
+                            _payload.add({
+                              "title": "Tambah",
+                              "step": 3,
+                              "id_survey": widget.data(),
+                              "tiga_bagian_bangunan": data['bagian-$i'].data.id,
+                              "tiga_hsp": data['sub-pekerjaan-${i}'].data.id,
+                              "tiga_sub_hsp": controller.subHspIds['$i'],
+                              "tiga_volume": volume['$i'],
+                              "tiga_hasil": hasil['$i'],
+                            });
+                          }
+
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return Center(
+                                child: Container(
+                                  padding: EdgeInsets.all(30),
+                                  width: MediaQuery.of(context).size.width * 0.5,
+                                  height: MediaQuery.of(context).size.width * 0.5,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            },
+                          );
+
+                          await api<TransactionApiService>(
+                            (request) => request.saveStep3(_payload),
+                            onSuccess: (response, _data) {
+                              pop();
+                              routeTo(
+                                SummaryPage.path,
+                                navigationType: NavigationType.pushReplace,
+                                data: widget.data(),
+                              );
+                            },
+                            onError: (dioException) {
+                              pop();
+                              showToastDanger(description: 'Gagal menyimpan data');
+                            },
+                          );
+                        }
                       },
                     ),
                     SizedBox(height: 16),
@@ -135,12 +237,16 @@ class Fields extends StatefulWidget {
     required this.bagianBangunan,
     required this.onDelete,
     required this.subPekerjaan,
+    required this.controller,
+    required this.formKey,
   });
 
   final int index;
   final List<SelectedListItem<Base>> bagianBangunan;
   final List<SelectedListItem<Base>> subPekerjaan;
   final VoidCallback onDelete;
+  final PenentuanNilaiController controller;
+  final GlobalKey<FormBuilderState> formKey;
 
   @override
   State<Fields> createState() => _FieldsState();
@@ -157,6 +263,15 @@ class _FieldsState extends State<Fields> {
       (request) => request.getAllHSP(id),
       onSuccess: (response, data) {
         List<Hsp> _res = data;
+
+        widget.controller.setTotalFields(_res.length, widget.index);
+        List<int> _hspIds = [];
+
+        _res.forEach((element) {
+          _hspIds.add(element.id!);
+        });
+
+        widget.controller.setSubHspIds(_hspIds, widget.index);
 
         setState(() {
           _fields[index.toString()] = _res.map((element) {
@@ -177,7 +292,6 @@ class _FieldsState extends State<Fields> {
 
   @override
   Widget build(BuildContext context) {
-    print('fields: $_fields');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
@@ -207,6 +321,7 @@ class _FieldsState extends State<Fields> {
           controller: bagianController,
           dataDropdown: widget.bagianBangunan,
           enable: true,
+          errorText: "Bangunan yang diamati tidak boleh kosong",
           onSelected: (p0) {},
           placeholder: 'Pilih Bagian Bangunan',
         ),
@@ -217,6 +332,7 @@ class _FieldsState extends State<Fields> {
           dataDropdown: widget.subPekerjaan,
           enable: true,
           controller: subPekerjaanController,
+          errorText: 'HSP tidak boleh kosong',
           onSelected: (item) {
             _onChangeHSP(item.data.id!, widget.index);
           },
@@ -232,12 +348,21 @@ class _FieldsState extends State<Fields> {
                 SizedBox(height: 8),
                 FormBuilderTextField(
                   name: 'pekerjaan-${widget.index}-$i',
-                  controller: _fields[widget.index.toString()][i]['controller'],
                   keyboardType: TextInputType.number,
+                  validator: FormBuilderValidators.required(errorText: 'Harus diisi'),
+                  onChanged: (val) {
+                    if (val != null && val.isNotEmpty) {
+                      final field = _fields[widget.index.toString()][i];
+                      TextEditingController _satuanController = field['satuan-controller'];
+                      _satuanController.text = '${int.parse(field['harga']) * int.parse(val)}';
+                      widget.formKey.currentState?.fields['satuan-${widget.index}-$i']
+                          ?.didChange('${int.parse(field['harga']) * int.parse(val)}');
+                    }
+                  },
                   decoration: InputDecoration(
                     border: OutlineInputBorder(),
                     isDense: true,
-                    hintText: 'Masukkan Angka',
+                    hintText: 'Masukkan Angka1',
                     hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ),
