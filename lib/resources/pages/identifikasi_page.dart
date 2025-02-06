@@ -24,6 +24,7 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
   List<SelectedListItem<Base>> bagianBangunan = [];
   List<SelectedListItem<Base>> kondisi = [];
   late int surveyId;
+  var _formKey = GlobalKey<FormBuilderState>();
 
   var formStates = {
     0: {
@@ -37,6 +38,9 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
   var images = [];
 
   Map<String, dynamic> initialValues = {};
+
+  @override
+  LoadingStyle get loadingStyle => LoadingStyle.skeletonizer();
 
   @override
   get init => () async {
@@ -109,12 +113,12 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                 initialValues['bagian-$i'] =
                     SelectedListItem(data: Base(id: _data[i].idBagianBangunan, nama: _data[i].bagianBangunan));
               }
+
+              _formKey = GlobalKey<FormBuilderState>();
             }
           },
         );
       };
-
-  final _formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget view(BuildContext context) {
@@ -160,20 +164,6 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                         formStates: formStates,
                         kondisi: kondisi,
                         onUpload: (imgUrl) {
-                          print(imgUrl);
-
-                          // print(images);
-                          // print(images.isEmpty);
-                          // print(images[i]);
-
-                          // if (images.isEmpty) {
-                          //   setState(() {
-                          //     images.add(imgUrl);
-                          //   });
-                          // } else {
-
-                          // }
-
                           if (images.length > i) {
                             setState(() {
                               images[i] = imgUrl;
@@ -315,13 +305,15 @@ class _FieldsState extends State<Fields> {
 
   @override
   void initState() {
-    // images = widget.initialImages;
-    // imgUrl = widget.initialImages.isNotEmpty ? widget.initialImages[widget.index] ?? '' : '';
+    images = widget.initialImages;
+    imgUrl = images.length > widget.index ? widget.initialImages[widget.index] ?? '' : '';
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    print('images length');
+    print(images.length);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
@@ -356,11 +348,12 @@ class _FieldsState extends State<Fields> {
           width: double.infinity,
           child: ElevatedButton(
             style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(images.isEmpty ? Colors.white : Colors.blueAccent.shade700),
-              foregroundColor: MaterialStateProperty.all(images.isEmpty ? Colors.black : Colors.white),
+              backgroundColor:
+                  MaterialStateProperty.all(images.length > widget.index ? Colors.blueAccent.shade700 : Colors.white),
+              foregroundColor: MaterialStateProperty.all(images.length > widget.index ? Colors.white : Colors.black),
               shape: MaterialStateProperty.all(RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: images.isEmpty ? Colors.grey : Colors.blueAccent.shade700))),
+                  side: BorderSide(color: images.length > widget.index ? Colors.blueAccent.shade700 : Colors.grey))),
             ),
             child: Text('UPLOAD FOTO'),
             onPressed: () {
@@ -373,13 +366,24 @@ class _FieldsState extends State<Fields> {
                     hasTopBarLayer: false,
                     forceMaxHeight: true,
                     child: UploadModal(
-                      images: images.isEmpty ? [] : [images[widget.index]],
+                      images: images.length > widget.index ? [images[widget.index]] : [],
                       onClose: (p0) {},
                       onUpload: (imgUrl, imgs) {
-                        setState(() {
-                          imgUrl = imgUrl;
-                          images = imgs;
-                        });
+                        // setState(() {
+                        //   imgUrl = imgUrl;
+                        //   images = imgs;
+                        // });
+
+                        if (images.length > widget.index) {
+                          setState(() {
+                            images.removeAt(widget.index);
+                            images.insert(widget.index, imgUrl);
+                          });
+                        } else {
+                          setState(() {
+                            images.add(imgUrl);
+                          });
+                        }
 
                         widget.onUpload(imgUrl);
                       },
@@ -540,9 +544,20 @@ class _UploadModalState extends State<UploadModal> {
 
   ImagePicker _picker = ImagePicker();
 
-  Widget renderImageFileOrNetwork(String imgUrl) {
+  Widget renderImageFileOrNetwork(String? imgUrl) {
+    if (imgUrl == null) {
+      return Icon(Icons.error);
+    }
     if (imgUrl.contains('http')) {
-      return Image.network(imgUrl, width: 200, height: 200, fit: BoxFit.cover);
+      return Image.network(
+        imgUrl,
+        width: 200,
+        height: 200,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(Icons.error);
+        },
+      );
     } else {
       return Image.file(File(imgUrl), width: 200, height: 200, fit: BoxFit.cover);
     }

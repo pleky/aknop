@@ -18,6 +18,9 @@ class _SummaryPageState extends NyState<SummaryPage> {
   DetailModel? _detail;
 
   @override
+  LoadingStyle get loadingStyle => LoadingStyle.skeletonizer();
+
+  @override
   get init => () async {
         await api<TransactionApiService>(
           (request) => request.detailSurvey(widget.data()),
@@ -30,9 +33,87 @@ class _SummaryPageState extends NyState<SummaryPage> {
         );
       };
 
+  Widget _renderDetailStepTwo() {
+    if (_detail == null) return SizedBox();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < _detail!.stepTwo!.length; i++)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('IDENTIFIKASI KEGIATAN ${i + 1} :').headingSmall(),
+              Text('Bangunan Yang Di Amati : '),
+              Text(_detail?.stepTwo![i].bagianBangunan ?? '').bodyMedium(fontWeight: FontWeight.w600),
+              SizedBox(height: 16),
+              Text('Upload Bukti Masalah : '),
+              Container(
+                width: double.infinity,
+                height: 200,
+                child: Image.network(
+                  _detail!.stepTwo![i].buktiSurvey!,
+                  height: 200,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Placeholder();
+                  },
+                ),
+              ),
+              SizedBox(height: 16),
+              Text('Judul Masalah : '),
+              Text(_detail?.stepTwo![i].masalah ?? '').bodyMedium(fontWeight: FontWeight.w600),
+              SizedBox(height: 16),
+              Text('Tindakan yang Diperlukan : '),
+              Text(_detail?.stepTwo![i].tindakan ?? '').bodyMedium(fontWeight: FontWeight.w600),
+              SizedBox(height: 16),
+              Text('Kondisi Fungsi : '),
+              Text(_detail?.stepTwo![i].vKondisiFungsi ?? '').bodyMedium(fontWeight: FontWeight.w600),
+              SizedBox(height: 16),
+              Text('Kondisi Fisik : '),
+              Text(_detail?.stepTwo![i].vKondisiFisik ?? '').bodyMedium(fontWeight: FontWeight.w600),
+              SizedBox(height: 16),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _renderDetailStepThree() {
+    if (_detail == null) return SizedBox();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < _detail!.stepThree!.length; i++)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('PENENTUAN NILAI ${i + 1} :').headingSmall(),
+              Text('Bangunan Yang Di Amati : '),
+              Text(_detail?.stepThree![i].vTigaBagianBangunan ?? '').bodyMedium(fontWeight: FontWeight.w600),
+              SizedBox(height: 16),
+              Text('HSP : '),
+              Text(_detail?.stepThree![i].vTigaHsp ?? '').bodyMedium(fontWeight: FontWeight.w600),
+              SizedBox(height: 16),
+              for (var j = 0; j < _detail!.stepThree![i].vTigaSubHsp!.length; j++)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_detail?.stepThree?[i].vTigaSubHsp?[j] ?? ''),
+                    Text(_detail?.stepThree?[i].tigaHasil?[j] ?? '').bodyMedium(fontWeight: FontWeight.w600),
+                    SizedBox(height: 16),
+                    Text(_detail?.stepThree![i].tigaSatuan![j] ?? ''),
+                    Text('${int.parse(_detail!.stepThree![i].tigaHasil![j]) / int.parse(_detail!.stepThree![i].tigaVolume![j])}')
+                        .bodyMedium(fontWeight: FontWeight.w600),
+                    SizedBox(height: 16),
+                  ],
+                )
+            ],
+          ),
+      ],
+    );
+  }
+
   @override
   Widget view(BuildContext context) {
-    print(_detail?.stepOne);
     return Scaffold(
       appBar: AppBar(
         title: const Text(""),
@@ -74,67 +155,8 @@ class _SummaryPageState extends NyState<SummaryPage> {
               Text('Sarana Prasarana : '),
               Text(_detail?.stepOne?.vJenisSarpra ?? '').bodyMedium(fontWeight: FontWeight.w600),
               SizedBox(height: 16),
-              for (var i = 0; i < _detail!.stepTwo!.length; i++)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('IDENTIFIKASI KEGIATAN ${i + 1} :').headingSmall(),
-                    Text('Bangunan Yang Di Amati : '),
-                    Text(_detail?.stepTwo![i].bagianBangunan ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                    SizedBox(height: 16),
-                    Text('Upload Bukti Masalah : '),
-                    Container(
-                      width: double.infinity,
-                      height: 200,
-                      child: Image.network(
-                        _detail!.stepTwo![i].buktiSurvey!,
-                        height: 200,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Placeholder();
-                        },
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Text('Judul Masalah : '),
-                    Text(_detail?.stepTwo![i].masalah ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                    SizedBox(height: 16),
-                    Text('Tindakan yang Diperlukan : '),
-                    Text(_detail?.stepTwo![i].tindakan ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                    SizedBox(height: 16),
-                    Text('Kondisi Fungsi : '),
-                    Text(_detail?.stepTwo![i].vKondisiFungsi ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                    SizedBox(height: 16),
-                    Text('Kondisi Fisik : '),
-                    Text(_detail?.stepTwo![i].vKondisiFisik ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                    SizedBox(height: 16),
-                  ],
-                ),
-              for (var i = 0; i < _detail!.stepThree!.length; i++)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('PENENTUAN NILAI ${i + 1} :').headingSmall(),
-                    Text('Bangunan Yang Di Amati : '),
-                    Text(_detail?.stepThree![i].vTigaBagianBangunan ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                    SizedBox(height: 16),
-                    Text('HSP : '),
-                    Text(_detail?.stepThree![i].vTigaHsp ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                    SizedBox(height: 16),
-                    for (var j = 0; j < _detail!.stepThree![i].vTigaSubHsp!.length; j++)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_detail?.stepThree![i].vTigaSubHsp![j] ?? ''),
-                          Text(_detail?.stepThree![i].tigaHasil![j] ?? '').bodyMedium(fontWeight: FontWeight.w600),
-                          SizedBox(height: 16),
-                          Text(_detail?.stepThree![i].tigaSatuan![j] ?? ''),
-                          Text('${int.parse(_detail!.stepThree![i].tigaHasil![j]) / int.parse(_detail!.stepThree![i].tigaVolume![j])}')
-                              .bodyMedium(fontWeight: FontWeight.w600),
-                          SizedBox(height: 16),
-                        ],
-                      )
-                  ],
-                ),
+              _renderDetailStepTwo(),
+              _renderDetailStepThree(),
               Container(
                 width: double.infinity,
                 child: OutlinedButton(

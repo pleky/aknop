@@ -29,6 +29,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
   final TextEditingController sungaiController = TextEditingController();
   final TextEditingController aknopController = TextEditingController();
   final TextEditingController sarpraController = TextEditingController();
+  final TextEditingController judulController = TextEditingController();
 
   List<SelectedListItem<Base>> wilayahSungai = [];
   List<SelectedListItem<Base>> sungai = [];
@@ -39,6 +40,11 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
   String? get stateName => 'sungai_state';
   DetailModel? detailModel;
   Map<String, dynamic> initialValues = {};
+
+  @override
+  LoadingStyle get loadingStyle => LoadingStyle.skeletonizer();
+
+  var _formKey = GlobalKey<FormBuilderState>();
 
   @override
   get init => () async {
@@ -75,38 +81,63 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
               if (data['success'] == false) return;
               final DetailModel _detail = DetailModel.fromJson(data['data']);
 
-              final decodedPolygon = jsonDecode(_detail.stepOne?.polygon ?? '');
-              List<List<double>> polygon =
-                  List<List<double>>.from(decodedPolygon['coordinates'].map((e) => List<double>.from(e)));
+              if (_detail.stepOne?.polygon != null) {
+                final decodedPolygon = jsonDecode(_detail.stepOne?.polygon ?? '');
+                List<List<double>> polygon =
+                    List<List<double>>.from(decodedPolygon['coordinates'].map((e) => List<double>.from(e)));
 
-              setState(() {
-                initialValues = {
-                  'judul': _detail.stepOne!.judul!,
-                  'lokasi': polygon,
-                  'wSungai': SelectedListItem(
-                    data: Base(id: _detail.stepOne!.wsungai, nama: _detail.stepOne!.vWsungai),
-                  ),
-                  'sungai': SelectedListItem(
-                    data: Base(id: _detail.stepOne!.sungai, nama: _detail.stepOne!.vSungai),
-                  ),
-                  'aknop': SelectedListItem(
-                    data: Base(id: _detail.stepOne!.jenisAknop, nama: _detail.stepOne!.vJenisAknop),
-                  ),
-                  'sarpra': SelectedListItem(
-                    data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
-                  ),
-                  // 'year': DateTime.parse(detailModel!.stepOne!.year!),
-                };
-                detailModel = _detail;
-              });
+                setState(() {
+                  detailModel = _detail;
+                  initialValues = {
+                    'judul': _detail.stepOne!.judul!,
+                    'lokasi': polygon,
+                    'wSungai': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.wsungai, nama: _detail.stepOne!.vWsungai),
+                    ),
+                    'sungai': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.sungai, nama: _detail.stepOne!.vSungai),
+                    ),
+                    'aknop': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.jenisAknop, nama: _detail.stepOne!.vJenisAknop),
+                    ),
+                    'sarpra': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
+                    ),
+                    // 'year': DateTime.parse(detailModel!.stepOne!.year!),
+                  };
+                });
+              } else {
+                setState(() {
+                  initialValues = {
+                    'judul': _detail.stepOne!.judul!,
+                    'wSungai': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.wsungai, nama: _detail.stepOne!.vWsungai),
+                    ),
+                    'sungai': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.sungai, nama: _detail.stepOne!.vSungai),
+                    ),
+                    'aknop': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.jenisAknop, nama: _detail.stepOne!.vJenisAknop),
+                    ),
+                    'sarpra': SelectedListItem(
+                      data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
+                    ),
+                    // 'year': DateTime.parse(detailModel!.stepOne!.year!),
+                  };
+                  detailModel = _detail;
+                });
+              }
 
               wSungaiController.text = detailModel!.stepOne!.vWsungai!;
               sungaiController.text = detailModel!.stepOne!.vSungai!;
               aknopController.text = detailModel!.stepOne!.vJenisAknop!;
               sarpraController.text = detailModel!.stepOne!.vJenisSarpra!;
+              judulController.text = detailModel!.stepOne!.judul!;
 
               await getListSarpra(_detail.stepOne!.jenisAknop);
               await getListSungai(_detail.stepOne!.wsungai);
+
+              _formKey = GlobalKey<FormBuilderState>();
             },
           );
         }
@@ -142,8 +173,6 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
     );
   }
 
-  final _formKey = GlobalKey<FormBuilderState>();
-
   @override
   Widget view(BuildContext context) {
     return Scaffold(
@@ -178,6 +207,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                 FormBuilderTextField(
                   name: "judul",
                   maxLines: 3,
+                  controller: judulController,
                   validator: FormBuilderValidators.required(errorText: 'Judul Survey tidak boleh kosong'),
                   decoration: InputDecoration(
                     isDense: true,

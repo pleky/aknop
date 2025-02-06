@@ -59,7 +59,7 @@ class MasterApiService extends NyApiService {
     );
   }
 
-  Future<List<Hsp>?> getAllHSP(int id) async {
+  Future<List<Hsp>?> getAllHSP(dynamic id) async {
     return await network<List<Hsp>>(
       request: (api) => api.get('/list/hsp/$id'),
     );

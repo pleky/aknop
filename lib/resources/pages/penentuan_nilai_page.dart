@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/base.dart';
@@ -8,7 +6,6 @@ import 'package:flutter_app/app/models/hsp.dart';
 import 'package:flutter_app/app/networking/master_api_service.dart';
 import 'package:flutter_app/app/networking/transaction_api_service.dart';
 import 'package:flutter_app/resources/pages/summary_page.dart';
-import 'package:flutter_app/resources/pages/volume_penentuan_nilai_page.dart';
 import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:flutter_app/resources/widgets/my_dropdown.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -28,9 +25,12 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
 
   List<SelectedListItem<Base>> bagianBangunan = [];
   List<SelectedListItem<Base>> subPekerjaan = [];
-  final _formKey = GlobalKey<FormBuilderState>();
+  var _formKey = GlobalKey<FormBuilderState>();
   int totalForm = 1;
   Map<String, dynamic> initialValues = {};
+
+  @override
+  LoadingStyle get loadingStyle => LoadingStyle.skeletonizer();
 
   @override
   get init => () async {
@@ -62,28 +62,32 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
 
         final surveyId = widget.data();
 
-        // await api<TransactionApiService>(
-        //   (request) => request.detailSurvey(surveyId),
-        //   onSuccess: (response, data) {
-        //     final DetailModel _res = DetailModel.fromJson(data['data']);
-        //     var _data = _res.stepThree;
+        await api<TransactionApiService>(
+          (request) => request.detailSurvey(surveyId),
+          onSuccess: (response, data) {
+            final DetailModel _res = DetailModel.fromJson(data['data']);
+            var _data = _res.stepThree;
+            if (_data == null || _data.isEmpty) return;
 
-        //     if (_data != null && _data.isNotEmpty) {
+            totalForm = _data.length;
 
-        //       for (var i = 0; i < _data.length; i++) {
-        //         for (var j = 0; j < _data[i].volume.length; j++) {
-        //           initialValues['pekerjaan-$i-$j'] = _data[i].volume[j].toString();
-        //         }
-        //       }
+            for (var i = 0; i < _data.length; i++) {
+              initialValues['bagian-$i'] =
+                  SelectedListItem(data: Base(id: _data[i].tigaBagianBangunan, nama: _data[i].vTigaBagianBangunan));
+              initialValues['sub-pekerjaan-$i'] =
+                  SelectedListItem(data: Base(id: _data[i].tigaHsp, nama: _data[i].vTigaHsp));
+              controller.setSubHspIds(_data[i].tigaSubHsp, i);
+              controller.setTotalFields(_data[i].tigaVolume!.length, i);
 
-        //       setState(() {
-        //         bagianBangunan = _bagianBangunan;
-        //         subPekerjaan = _subPekerjaan;
-        //         totalForm = _data.length;
-        //       });
-        //     }
-        //   },
-        // );
+              for (var j = 0; j < _data[i].tigaVolume!.length; j++) {
+                initialValues['pekerjaan-$i-$j'] = _data[i].tigaVolume![j].toString();
+                initialValues['satuan-$i-$j'] = _data[i].tigaHasil![j].toString();
+              }
+            }
+
+            _formKey = GlobalKey<FormBuilderState>();
+          },
+        );
       };
 
   @override
@@ -126,6 +130,7 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
                         bagianBangunan: bagianBangunan,
                         subPekerjaan: subPekerjaan,
                         index: i,
+                        initialData: initialValues,
                         controller: controller,
                         formKey: _formKey,
                         onDelete: () {
@@ -157,11 +162,11 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
                           for (var i = 0; i < totalForm; i++) {
                             volume['$i'] = [];
                             hasil['$i'] = [];
+
                             for (var j = 0; j < controller.totalFields['$i']; j++) {
                               var pekerjaan = data['pekerjaan-$i-$j'];
                               var satuan = data['satuan-$i-$j'];
 
-                              // Ensure values are not null before adding them
                               if (pekerjaan != null && pekerjaan != '') {
                                 (volume['$i'] as List).add(pekerjaan);
                               }
@@ -173,6 +178,7 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
                             _payload.add({
                               "title": "Tambah",
                               "step": 3,
+                              "tiga_seq": i,
                               "id_survey": widget.data(),
                               "tiga_bagian_bangunan": data['bagian-$i'].data.id,
                               "tiga_hsp": data['sub-pekerjaan-${i}'].data.id,
@@ -239,6 +245,7 @@ class Fields extends StatefulWidget {
     required this.subPekerjaan,
     required this.controller,
     required this.formKey,
+    required this.initialData,
   });
 
   final int index;
@@ -247,6 +254,7 @@ class Fields extends StatefulWidget {
   final VoidCallback onDelete;
   final PenentuanNilaiController controller;
   final GlobalKey<FormBuilderState> formKey;
+  final Map<String, dynamic> initialData;
 
   @override
   State<Fields> createState() => _FieldsState();
@@ -255,17 +263,35 @@ class Fields extends StatefulWidget {
 class _FieldsState extends State<Fields> {
   final TextEditingController bagianController = TextEditingController();
   final TextEditingController subPekerjaanController = TextEditingController();
+  MasterApiService _apiService = MasterApiService();
 
   Map<String, dynamic> _fields = {};
 
-  void _onChangeHSP(int id, int index) async {
-    await api<MasterApiService>(
-      (request) => request.getAllHSP(id),
-      onSuccess: (response, data) {
-        List<Hsp> _res = data;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialData.isNotEmpty) {
+      if (widget.initialData['bagian-${widget.index}'] != null) {
+        bagianController.text = widget.initialData['bagian-${widget.index}'].data.nama;
+      }
 
-        widget.controller.setTotalFields(_res.length, widget.index);
-        List<int> _hspIds = [];
+      if (widget.initialData['sub-pekerjaan-${widget.index}'] != null) {
+        subPekerjaanController.text = widget.initialData['sub-pekerjaan-${widget.index}'].data.nama;
+        _onChangeHSP(
+          widget.initialData['sub-pekerjaan-${widget.index}'].data.id!,
+          widget.index,
+          initialData: widget.initialData,
+        );
+      }
+    }
+  }
+
+  void _onChangeHSP(dynamic id, dynamic index, {Map<String, dynamic>? initialData}) async {
+    try {
+      List<Hsp>? _res = await _apiService.getAllHSP(id);
+      if (_res?.isNotEmpty == true) {
+        widget.controller.setTotalFields(_res!.length, widget.index);
+        List<dynamic> _hspIds = [];
 
         _res.forEach((element) {
           _hspIds.add(element.id!);
@@ -286,8 +312,19 @@ class _FieldsState extends State<Fields> {
             };
           }).toList();
         });
-      },
-    );
+
+        if (initialData != null) {
+          for (int i = 0; i < _res.length; i++) {
+            final field = _fields[index.toString()][i];
+
+            field['controller'].text = initialData['pekerjaan-$index-$i'];
+            field['satuan-controller'].text = initialData['satuan-$index-$i'];
+            widget.formKey.currentState?.fields['pekerjaan-$index-$i']?.didChange(initialData['pekerjaan-$index-$i']);
+            widget.formKey.currentState?.fields['satuan-$index-$i']?.didChange(initialData['satuan-$index-$i']);
+          }
+        }
+      }
+    } catch (e) {}
   }
 
   @override

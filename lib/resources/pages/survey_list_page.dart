@@ -66,7 +66,6 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                 expandedHeight: 150.0, // Height when expanded
                 floating: true, // AppBar doesn't float
                 pinned: true,
-                // AppBar remains pinned when collapsed
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding: EdgeInsets.all(16),
                   title: Text(

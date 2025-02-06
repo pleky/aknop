@@ -6,15 +6,19 @@ class PenentuanNilaiController extends Controller {
   Map<String, dynamic> totalFields = {};
 
   @override
+  bool get singleton => true;
+
+  @override
   construct(BuildContext context) {
     super.construct(context);
   }
 
-  void setSubHspIds(List<int> ids, int index) {
+  void setSubHspIds(List<dynamic>? ids, int index) {
     subHspIds['$index'] = ids;
   }
 
-  void setTotalFields(int total, int index) {
+  void setTotalFields(dynamic total, dynamic index) {
+    print('total: $total -> $index');
     totalFields['$index'] = total;
   }
 }
