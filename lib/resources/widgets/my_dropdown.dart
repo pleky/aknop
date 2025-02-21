@@ -53,6 +53,7 @@ class MyDropdownField extends StatelessWidget {
             onTap: () {
               DropDownState<Base>(
                 dropDown: DropDown<Base>(
+                  isSearchVisible: false,
                   useRootNavigator: true,
                   data: dataDropdown,
                   listItemBuilder: (index, dataItem) => Text(dataItem.data.nama ?? ''),

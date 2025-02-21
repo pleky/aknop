@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:flutter_app/resources/widgets/my_dropdown.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 class IdentifikasiPage extends NyStatefulWidget {
@@ -35,7 +37,7 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
   };
 
   var totalForm = 1;
-  var images = [];
+  var images = {};
 
   Map<String, dynamic> initialValues = {};
 
@@ -97,12 +99,6 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                 totalForm = _data.length;
               });
 
-              _data.forEach((element) {
-                setState(() {
-                  images.add(element.buktiSurvey);
-                });
-              });
-
               for (var i = 0; i < _data.length; i++) {
                 initialValues['judul-$i'] = _data[i].masalah;
                 initialValues['tindakan-$i'] = _data[i].tindakan;
@@ -112,6 +108,10 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                     SelectedListItem(data: Base(id: _data[i].kondisiFisik, nama: _data[i].vKondisiFisik));
                 initialValues['bagian-$i'] =
                     SelectedListItem(data: Base(id: _data[i].idBagianBangunan, nama: _data[i].bagianBangunan));
+
+                setState(() {
+                  images['$i'] = _data[i].buktiSurvey;
+                });
               }
 
               _formKey = GlobalKey<FormBuilderState>();
@@ -156,23 +156,31 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                   spacing: 8,
                   children: [
                     Center(child: Text('Identifikasi Kegiatan').headingMedium()),
+                    TextButton(
+                      style: ButtonStyle(
+                        padding: MaterialStateProperty.all(EdgeInsets.zero),
+                      ),
+                      onPressed: () async {
+                        final url = Uri.parse("https://aknop.3ka.my.id/sample.pdf");
+                        final canLaunch = await canLaunchUrl(url);
+                        if (canLaunch) {
+                          await launchUrl(url);
+                        }
+                      },
+                      child: Text('Panduan Pengisian Kreteria')
+                          .bodyMedium(color: Colors.blueAccent.shade700, decoration: TextDecoration.underline),
+                    ),
                     for (var i = 0; i < totalForm; i++)
                       Fields(
                         index: i,
                         bagianBangunan: bagianBangunan,
-                        initialImages: images,
+                        initialImages: images['$i'] ?? [],
                         formStates: formStates,
                         kondisi: kondisi,
-                        onUpload: (imgUrl) {
-                          if (images.length > i) {
-                            setState(() {
-                              images[i] = imgUrl;
-                            });
-                          } else {
-                            setState(() {
-                              images.add(imgUrl);
-                            });
-                          }
+                        onUpload: (imgList) {
+                          setState(() {
+                            images['$i'] = imgList;
+                          });
                         },
                         onDelete: (fieldIndex) {
                           setState(() {
@@ -196,7 +204,6 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                     Button.rounded(
                       text: 'Simpan Data',
                       onPressed: () async {
-                        // routeTo();
                         _formKey.currentState?.saveAndValidate();
                         if (_formKey.currentState?.validate() ?? false) {
                           final data = _formKey.currentState!.value;
@@ -211,6 +218,7 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                           var fisik = [];
                           var fungsi = [];
                           var bangunan = [];
+                          List<dynamic> bukti = [];
 
                           for (var i = 0; i < totalForm; i++) {
                             masalah.add(data['judul-$i']);
@@ -218,6 +226,7 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                             fungsi.add(data['fungsi-$i'].data.id);
                             fisik.add(data['fisik-$i'].data.id);
                             bangunan.add(data['bagian-$i'].data.id);
+                            bukti.add(images['$i']);
                           }
 
                           payload['masalah'] = masalah;
@@ -225,7 +234,7 @@ class _IdentifikasiPageState extends NyPage<IdentifikasiPage> {
                           payload['kondisiFungsi'] = fungsi;
                           payload['kondisiFisik'] = fisik;
                           payload['bagianbagunan'] = bangunan;
-                          payload['bukti_survey'] = images;
+                          payload['bukti_survey'] = bukti;
 
                           showDialog(
                             context: context,
@@ -292,7 +301,7 @@ class Fields extends StatefulWidget {
   final List<SelectedListItem<Base>> bagianBangunan;
   final List<SelectedListItem<Base>> kondisi;
   final List initialImages;
-  final Function(String) onUpload;
+  final Function(List<String?>) onUpload;
   final Function(int) onDelete;
 
   @override
@@ -301,19 +310,15 @@ class Fields extends StatefulWidget {
 
 class _FieldsState extends State<Fields> {
   var images = [];
-  String imgUrl = '';
 
   @override
   void initState() {
     images = widget.initialImages;
-    imgUrl = images.length > widget.index ? widget.initialImages[widget.index] ?? '' : '';
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    print('images length');
-    print(images.length);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
@@ -339,7 +344,7 @@ class _FieldsState extends State<Fields> {
           controller: widget.formStates[widget.index]['controllerBagian'],
           dataDropdown: widget.bagianBangunan,
           enable: true,
-          onSelected: (p0) => print(p0),
+          onSelected: (p0) => {},
           placeholder: 'Pilih Bagian Bangunan',
         ),
         SizedBox(height: 2),
@@ -348,12 +353,11 @@ class _FieldsState extends State<Fields> {
           width: double.infinity,
           child: ElevatedButton(
             style: ButtonStyle(
-              backgroundColor:
-                  MaterialStateProperty.all(images.length > widget.index ? Colors.blueAccent.shade700 : Colors.white),
-              foregroundColor: MaterialStateProperty.all(images.length > widget.index ? Colors.white : Colors.black),
+              backgroundColor: MaterialStateProperty.all(images.isNotEmpty ? Colors.blueAccent.shade700 : Colors.white),
+              foregroundColor: MaterialStateProperty.all(images.isNotEmpty ? Colors.white : Colors.black),
               shape: MaterialStateProperty.all(RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: images.length > widget.index ? Colors.blueAccent.shade700 : Colors.grey))),
+                  side: BorderSide(color: images.isNotEmpty ? Colors.blueAccent.shade700 : Colors.grey))),
             ),
             child: Text('UPLOAD FOTO'),
             onPressed: () {
@@ -366,26 +370,16 @@ class _FieldsState extends State<Fields> {
                     hasTopBarLayer: false,
                     forceMaxHeight: true,
                     child: UploadModal(
-                      images: images.length > widget.index ? [images[widget.index]] : [],
+                      images: images,
                       onClose: (p0) {},
-                      onUpload: (imgUrl, imgs) {
-                        // setState(() {
-                        //   imgUrl = imgUrl;
-                        //   images = imgs;
-                        // });
-
-                        if (images.length > widget.index) {
+                      onUpload: (imgs) {
+                        imgs.forEach((element) {
                           setState(() {
-                            images.removeAt(widget.index);
-                            images.insert(widget.index, imgUrl);
+                            images.add(element);
                           });
-                        } else {
-                          setState(() {
-                            images.add(imgUrl);
-                          });
-                        }
+                        });
 
-                        widget.onUpload(imgUrl);
+                        widget.onUpload(imgs);
                       },
                     ),
                   )
@@ -489,13 +483,14 @@ class ButtonAddBagian extends StatelessWidget {
 
 class UploadModal extends StatefulWidget {
   final List images;
-  final Function(String, List) onUpload;
+  final Function(List<String?>) onUpload;
   final Function(List) onClose;
 
   const UploadModal({
     required this.images,
     required this.onUpload,
     required this.onClose,
+    super.key,
   });
 
   @override
@@ -505,27 +500,40 @@ class UploadModal extends StatefulWidget {
 class _UploadModalState extends State<UploadModal> {
   bool isLoading = false;
 
-  Future<void> upload() async {
-    if (_tempImages.first.contains('http')) {
-      widget.onUpload(_tempImages.first, _tempImages);
-      Navigator.pop(context);
-      return;
-    }
+  final TransactionApiService _apiService = TransactionApiService();
+  List _tempImages = [];
 
+  @override
+  void initState() {
+    widget.images.forEach((element) {
+      if (element.contains('http')) {
+        _tempImages.add(element);
+      }
+    });
+    super.initState();
+  }
+
+  Future<void> upload() async {
     setState(() {
       isLoading = true;
     });
 
-    await api<TransactionApiService>(
-      (request) => request.upload(File(_tempImages.first)),
-      onSuccess: (response, data) {
-        widget.onUpload(data['data'], _tempImages);
-        setState(() {
-          isLoading = false;
-        });
-        Navigator.pop(context);
-      },
-    );
+    if (_tempImages.isNotEmpty) {
+      final data = await Future.wait(_tempImages.map((e) async {
+        if (!e.contains('http')) {
+          final _res = await _apiService.upload(File(e));
+          return _res;
+        }
+      }));
+      final remoteimgs = _tempImages.where((element) => element.contains('http')).toList();
+      final filteredData = data.where((element) => element != null).toList();
+      remoteimgs.forEach((element) {
+        filteredData.add(element);
+      });
+
+      Navigator.of(context).pop();
+      widget.onUpload.call(filteredData);
+    }
   }
 
   String _getFileName(String? path) {
@@ -534,34 +542,7 @@ class _UploadModalState extends State<UploadModal> {
     return path.split('/').last;
   }
 
-  List _tempImages = [];
-
-  @override
-  void initState() {
-    _tempImages = widget.images;
-    super.initState();
-  }
-
   ImagePicker _picker = ImagePicker();
-
-  Widget renderImageFileOrNetwork(String? imgUrl) {
-    if (imgUrl == null) {
-      return Icon(Icons.error);
-    }
-    if (imgUrl.contains('http')) {
-      return Image.network(
-        imgUrl,
-        width: 200,
-        height: 200,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Icon(Icons.error);
-        },
-      );
-    } else {
-      return Image.file(File(imgUrl), width: 200, height: 200, fit: BoxFit.cover);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -571,7 +552,6 @@ class _UploadModalState extends State<UploadModal> {
         IconButton(
           icon: Icon(Icons.close),
           onPressed: () {
-            widget.onClose.call(_tempImages);
             Navigator.pop(context);
           },
         ),
@@ -592,92 +572,79 @@ class _UploadModalState extends State<UploadModal> {
         ),
         SizedBox(height: 20),
         InkWell(
-          onTap: () {
-            WoltModalSheet.show(
-              context: context,
-              modalTypeBuilder: (context) => WoltModalType.dialog(),
-              useSafeArea: false,
-              pageListBuilder: (context) {
-                return [
-                  WoltModalSheetPage(
-                    hasTopBarLayer: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          title: Text('Kamera'),
-                          onTap: () async {
-                            final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-                            if (photo != null) {
-                              if (_tempImages.isNotEmpty) {
-                                setState(() {
-                                  _tempImages.removeLast();
-                                  _tempImages.add(photo.path);
-                                });
-                              } else {
-                                setState(() {
-                                  _tempImages.add(photo.path);
-                                });
-                              }
-                              Navigator.pop(context);
-                            }
-                          },
-                        ),
-                        ListTile(
-                          title: Text('Galeri'),
-                          onTap: () async {
-                            final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
-                            if (photo != null) {
-                              if (_tempImages.isNotEmpty) {
-                                setState(() {
-                                  _tempImages.removeLast();
-                                  _tempImages.add(photo.path);
-                                });
-                              } else {
-                                setState(() {
-                                  _tempImages.add(photo.path);
-                                });
-                              }
+          onTap: _tempImages.length >= 5
+              ? null
+              : () {
+                  WoltModalSheet.show(
+                    context: context,
+                    modalTypeBuilder: (context) => WoltModalType.dialog(),
+                    useSafeArea: false,
+                    pageListBuilder: (context) {
+                      return [
+                        WoltModalSheetPage(
+                          hasTopBarLayer: false,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ListTile(
+                                title: Text('Kamera'),
+                                onTap: () async {
+                                  final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                                  if (photo != null) {
+                                    setState(() {
+                                      _tempImages.add(photo.path);
+                                    });
+                                    Navigator.pop(context);
+                                  }
+                                },
+                              ),
+                              ListTile(
+                                title: Text('Galeri'),
+                                onTap: () async {
+                                  final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
+                                  if (photo != null) {
+                                    setState(() {
+                                      _tempImages.add(photo.path);
+                                    });
 
-                              Navigator.pop(context);
-                            }
-                          },
+                                    Navigator.pop(context);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                ];
-              },
-            );
-          },
+                      ];
+                    },
+                  );
+                },
           child: Center(
             child: DottedBorder(
               dashPattern: [3],
               radius: Radius.circular(8),
-              color: Colors.blueAccent.shade700,
+              color: _tempImages.length >= 5 ? Colors.grey : Colors.blueAccent.shade700,
               borderType: BorderType.RRect,
               child: Container(
-                height: 200,
+                height: 100,
                 width: 200,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: _tempImages.isNotEmpty
-                    ? renderImageFileOrNetwork(_tempImages.first)
-                    : Center(
-                        child: Icon(
-                          Icons.add,
-                          color: Colors.blueAccent.shade700,
-                        ),
-                      ),
+                child: Center(
+                  child: Icon(
+                    Icons.add,
+                    // color: Colors.blueAccent.shade700,
+                    color: _tempImages.length >= 5 ? Colors.grey : Colors.blueAccent.shade700,
+                  ),
+                ),
               ),
             ),
           ),
         ),
         SizedBox(height: 30),
         SizedBox(
-          height: 100,
+          height: 250,
           child: ListView.separated(
             padding: EdgeInsets.symmetric(horizontal: 24),
             physics: NeverScrollableScrollPhysics(),
@@ -699,7 +666,7 @@ class _UploadModalState extends State<UploadModal> {
               ],
             ),
             itemCount: _tempImages.length,
-            separatorBuilder: (context, index) => Divider(color: Colors.black),
+            separatorBuilder: (context, index) => Divider(color: Colors.black, height: 1),
           ),
         ),
         Container(

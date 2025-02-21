@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/models/home.dart';
 import 'package:flutter_app/app/models/survey.dart';
 import 'package:flutter_app/app/networking/transaction_api_service.dart';
 import 'package:flutter_app/resources/pages/detail_survey_page.dart';
 import 'package:flutter_app/resources/pages/form_survey_page.dart';
+import 'package:flutter_app/resources/pages/landing_page.dart';
+import 'package:flutter_debouncer/flutter_debouncer.dart';
 import 'package:intl/intl.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/survey_list_controller.dart';
@@ -16,10 +19,13 @@ class SurveyListPage extends NyStatefulWidget<SurveyListController> {
 class _SurveyListPageState extends NyState<SurveyListPage> {
   /// [SurveyListController] controller
   SurveyListController get controller => widget.controller;
+  final Debouncer _debouncer = Debouncer();
+  TransactionApiService _transactionApiService = TransactionApiService();
 
   late ScrollController _scrollController;
   bool _isPinned = false;
   List<Survey> surveys = [];
+  HomeModel? homeData;
 
   @override
   void initState() {
@@ -48,7 +54,34 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
             });
           },
         );
+
+        dynamic _authData = await Auth.data();
+
+        await api<TransactionApiService>(
+          (request) => request.getHomeData('${_authData['id']}'),
+          onSuccess: (response, data) {
+            setState(() {
+              homeData = data;
+            });
+          },
+        );
       };
+
+  void _handleTextFieldChange(String value) {
+    const duration = Duration(milliseconds: 500);
+    _debouncer.debounce(
+      duration: duration,
+      onDebounce: () async {
+        await _transactionApiService.getAllSurvey(title: value).then((data) {
+          if (data != null) {
+            setState(() {
+              surveys = data;
+            });
+          }
+        });
+      },
+    );
+  }
 
   @override
   Widget view(BuildContext context) {
@@ -63,7 +96,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
             controller: _scrollController,
             slivers: [
               SliverAppBar(
-                expandedHeight: 150.0, // Height when expanded
+                expandedHeight: 130.0, // Height when expanded
                 floating: true, // AppBar doesn't float
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
@@ -77,7 +110,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                   background: Container(
                     color: Colors.white,
                     child: Container(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.only(top: 16, left: 16),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         spacing: 8,
@@ -100,13 +133,90 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Aria').bodyLarge(),
-                              Text('Folunter'),
+                              Text(homeData?.user?.username ?? '').bodyLarge(),
+                              Text(homeData?.user?.email ?? '').bodySmall(),
                             ],
-                          )
+                          ),
+                          Spacer(),
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(Icons.logout),
+                            onPressed: () async {
+                              await Auth.logout();
+                              routeTo(LandingPage.path, navigationType: NavigationType.pushReplace);
+                            },
+                          ),
                         ],
                       ),
                     ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    spacing: 16,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Text('${homeData?.dashboard?.surveyTotal ?? 0}').displaySmall(color: Colors.white),
+                              Wrap(
+                                children: [
+                                  Text('Total ').bodySmall(color: Colors.white).alignCenter(),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Text('${homeData?.dashboard?.surveyCompleted ?? 0}').displaySmall(color: Colors.white),
+                              Wrap(
+                                children: [
+                                  Text('Selesai').bodySmall(color: Colors.white).alignCenter(),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Text('${homeData?.dashboard?.surveyDraft ?? 0}').displaySmall(color: Colors.white),
+                              Wrap(
+                                children: [
+                                  Text('Pending').bodySmall(color: Colors.white).alignCenter(),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -120,9 +230,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                       isDense: true,
                       prefixIcon: Icon(Icons.search),
                     ),
-                    onChanged: (value) {
-                      print(value);
-                    },
+                    onChanged: _handleTextFieldChange,
                   ),
                 ),
               ),
@@ -138,8 +246,8 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
                       onTap: () => routeTo(DetailSurveyPage.path, data: surveys[index].id),
                       trailing: surveys[index].status != 'COMPLETED'
                           ? Icon(
-                              Icons.circle,
-                              color: Color(0xFFd9d9d9),
+                              Icons.pending_actions,
+                              color: Colors.orange,
                             )
                           : Icon(
                               Icons.check_circle_outline,
@@ -157,7 +265,7 @@ class _SurveyListPageState extends NyState<SurveyListPage> {
       ),
       floatingActionButton: FloatingActionButton.small(
         child: Icon(Icons.add),
-        onPressed: () {
+        onPressed: () async {
           routeTo(FormSurveyPage.path, data: 'none');
         },
       ),

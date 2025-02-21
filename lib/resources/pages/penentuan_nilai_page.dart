@@ -5,11 +5,13 @@ import 'package:flutter_app/app/models/detail.dart';
 import 'package:flutter_app/app/models/hsp.dart';
 import 'package:flutter_app/app/networking/master_api_service.dart';
 import 'package:flutter_app/app/networking/transaction_api_service.dart';
+import 'package:flutter_app/app/utils/formatter.dart';
 import 'package:flutter_app/resources/pages/summary_page.dart';
 import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:flutter_app/resources/widgets/my_dropdown.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:number_text_input_formatter/number_text_input_formatter.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/controllers/penentuan_nilai_controller.dart';
 
@@ -80,8 +82,8 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
               controller.setTotalFields(_data[i].tigaVolume!.length, i);
 
               for (var j = 0; j < _data[i].tigaVolume!.length; j++) {
-                initialValues['pekerjaan-$i-$j'] = _data[i].tigaVolume![j].toString();
-                initialValues['satuan-$i-$j'] = _data[i].tigaHasil![j].toString();
+                initialValues['pekerjaan-$i-$j'] = CurrencyFormat.convertToIdr(int.parse(_data[i].tigaVolume![j]), 0);
+                initialValues['satuan-$i-$j'] = CurrencyFormat.convertToIdr(int.parse(_data[i].tigaHasil![j]), 0);
               }
             }
 
@@ -168,10 +170,10 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
                               var satuan = data['satuan-$i-$j'];
 
                               if (pekerjaan != null && pekerjaan != '') {
-                                (volume['$i'] as List).add(pekerjaan);
+                                (volume['$i'] as List).add(CurrencyFormat.removeGroupSeparator(pekerjaan));
                               }
                               if (satuan != null && satuan != '') {
-                                (hasil['$i'] as List).add(satuan);
+                                (hasil['$i'] as List).add(CurrencyFormat.removeGroupSeparator(satuan));
                               }
                             }
 
@@ -187,6 +189,8 @@ class _PenentuanNilaiPageState extends NyState<PenentuanNilaiPage> {
                               "tiga_hasil": hasil['$i'],
                             });
                           }
+
+                          print(_payload);
 
                           showDialog(
                             context: context,
@@ -387,13 +391,28 @@ class _FieldsState extends State<Fields> {
                   name: 'pekerjaan-${widget.index}-$i',
                   keyboardType: TextInputType.number,
                   validator: FormBuilderValidators.required(errorText: 'Harus diisi'),
+                  inputFormatters: [
+                    NumberTextInputFormatter(
+                      integerDigits: 10,
+                      decimalDigits: 0,
+                      decimalSeparator: ',',
+                      groupDigits: 3,
+                      groupSeparator: '.',
+                      allowNegative: false,
+                      overrideDecimalPoint: true,
+                      insertDecimalPoint: false,
+                      insertDecimalDigits: false,
+                    ),
+                  ],
                   onChanged: (val) {
                     if (val != null && val.isNotEmpty) {
                       final field = _fields[widget.index.toString()][i];
                       TextEditingController _satuanController = field['satuan-controller'];
-                      _satuanController.text = '${int.parse(field['harga']) * int.parse(val)}';
-                      widget.formKey.currentState?.fields['satuan-${widget.index}-$i']
-                          ?.didChange('${int.parse(field['harga']) * int.parse(val)}');
+                      final originalValue = CurrencyFormat.removeGroupSeparator(val);
+                      final total = int.parse(field['harga']) * int.parse(originalValue);
+                      final currency = CurrencyFormat.convertToIdr(total, 0);
+                      _satuanController.text = currency;
+                      widget.formKey.currentState?.fields['satuan-${widget.index}-$i']?.didChange(currency);
                     }
                   },
                   decoration: InputDecoration(

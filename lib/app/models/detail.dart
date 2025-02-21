@@ -133,7 +133,7 @@ class StepTwo {
   String? idBagianBangunan;
   String? vKondisiFungsi;
   String? vKondisiFisik;
-  String? buktiSurvey;
+  List<String>? buktiSurvey;
 
   StepTwo({
     this.id,
@@ -160,7 +160,8 @@ class StepTwo {
     idBagianBangunan = json['id_bagian_bangunan'];
     vKondisiFungsi = json['v_kondisi_fungsi'];
     vKondisiFisik = json['v_kondisi_fisik'];
-    buktiSurvey = json['bukti_survey'];
+    buktiSurvey = json['bukti_survey'].cast<String>();
+    ;
   }
 
   Map<String, dynamic> toJson() {

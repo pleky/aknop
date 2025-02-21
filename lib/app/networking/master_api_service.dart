@@ -10,13 +10,6 @@ class MasterApiService extends NyApiService {
   @override
   String get baseUrl => getEnv('API_BASE_URL');
 
-  /// Example API Request
-  Future<dynamic> fetchData() async {
-    return await network(
-      request: (request) => request.get("/endpoint-path"),
-    );
-  }
-
   Future<List<Base>?> getAllWilayahSungai() async {
     return await network<List<Base>>(
       request: (api) => api.get('/list/wsungai'),

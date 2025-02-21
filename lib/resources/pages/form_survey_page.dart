@@ -13,6 +13,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:intl/intl.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:flutter_app/app/providers/location_provider.dart';
 import '/app/controllers/form_survey_controller.dart';
 
 class FormSurveyPage extends NyStatefulWidget<FormSurveyController> {
@@ -43,6 +44,8 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
 
   @override
   LoadingStyle get loadingStyle => LoadingStyle.skeletonizer();
+
+  LocationProvider locationProvider = LocationProvider();
 
   var _formKey = GlobalKey<FormBuilderState>();
 
@@ -80,33 +83,56 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
             onSuccess: (response, data) async {
               if (data['success'] == false) return;
               final DetailModel _detail = DetailModel.fromJson(data['data']);
-
+              final dateFromYear =
+                  _detail.stepOne?.year != null ? DateTime.parse('${_detail.stepOne!.year!}-07-20') : DateTime.now();
               if (_detail.stepOne?.polygon != null) {
                 final decodedPolygon = jsonDecode(_detail.stepOne?.polygon ?? '');
-                List<List<double>> polygon =
-                    List<List<double>>.from(decodedPolygon['coordinates'].map((e) => List<double>.from(e)));
-
-                setState(() {
-                  detailModel = _detail;
-                  initialValues = {
-                    'judul': _detail.stepOne!.judul!,
-                    'lokasi': polygon,
-                    'wSungai': SelectedListItem(
-                      data: Base(id: _detail.stepOne!.wsungai, nama: _detail.stepOne!.vWsungai),
-                    ),
-                    'sungai': SelectedListItem(
-                      data: Base(id: _detail.stepOne!.sungai, nama: _detail.stepOne!.vSungai),
-                    ),
-                    'aknop': SelectedListItem(
-                      data: Base(id: _detail.stepOne!.jenisAknop, nama: _detail.stepOne!.vJenisAknop),
-                    ),
-                    'sarpra': SelectedListItem(
-                      data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
-                    ),
-                    // 'year': DateTime.parse(detailModel!.stepOne!.year!),
-                  };
-                });
+                if (decodedPolygon['coordinates'] != null) {
+                  List<List<double>> polygon =
+                      List<List<double>>.from(decodedPolygon['coordinates'].map((e) => List<double>.from(e)));
+                  setState(() {
+                    detailModel = _detail;
+                    initialValues = {
+                      'judul': _detail.stepOne!.judul!,
+                      'lokasi': polygon,
+                      'wSungai': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.wsungai, nama: _detail.stepOne!.vWsungai),
+                      ),
+                      'sungai': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.sungai, nama: _detail.stepOne!.vSungai),
+                      ),
+                      'aknop': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.jenisAknop, nama: _detail.stepOne!.vJenisAknop),
+                      ),
+                      'sarpra': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
+                      ),
+                      'year': dateFromYear,
+                    };
+                  });
+                } else {
+                  setState(() {
+                    initialValues = {
+                      'judul': _detail.stepOne!.judul!,
+                      'wSungai': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.wsungai, nama: _detail.stepOne!.vWsungai),
+                      ),
+                      'sungai': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.sungai, nama: _detail.stepOne!.vSungai),
+                      ),
+                      'aknop': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.jenisAknop, nama: _detail.stepOne!.vJenisAknop),
+                      ),
+                      'sarpra': SelectedListItem(
+                        data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
+                      ),
+                      'year': dateFromYear,
+                    };
+                    detailModel = _detail;
+                  });
+                }
               } else {
+                print('masuk sini');
                 setState(() {
                   initialValues = {
                     'judul': _detail.stepOne!.judul!,
@@ -122,7 +148,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                     'sarpra': SelectedListItem(
                       data: Base(id: _detail.stepOne!.jenisSarpra, nama: _detail.stepOne!.vJenisSarpra),
                     ),
-                    // 'year': DateTime.parse(detailModel!.stepOne!.year!),
+                    'year': dateFromYear,
                   };
                   detailModel = _detail;
                 });
@@ -217,7 +243,7 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                 Text('Lokasi Saat Ini'),
                 FormBuilderField<List<List<double>>>(
                   name: 'lokasi',
-                  validator: FormBuilderValidators.required(errorText: 'Lokasi tidak boleh kosong'),
+                  // validator: FormBuilderValidators.required(errorText: 'Lokasi tidak boleh kosong'),
                   builder: (field) {
                     return TextField(
                       onTap: () {
@@ -238,13 +264,13 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                           Icons.location_on_outlined,
                           color: Colors.black,
                         ),
-                        hintText: 'Tandai Lokasi',
+                        hintText: 'Gambar Area Lokasi',
                         border: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.black),
                         ),
-                        error: field.errorText != null
-                            ? Text(field.errorText ?? '').setStyle(TextStyle(color: Colors.red, fontSize: 12))
-                            : null,
+                        // error: field.errorText != null
+                        //     ? Text(field.errorText ?? '').setStyle(TextStyle(color: Colors.red, fontSize: 12))
+                        //     : null,
                       ),
                     );
                   },
@@ -302,16 +328,43 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                   onSelected: (item) {},
                 ),
                 Text('Tahun Pelaksanaan'),
-                FormBuilderDateTimePicker(
+                FormBuilderField<DateTime>(
                   name: 'year',
-                  inputType: InputType.date,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  format: DateFormat('yyyy'),
-                  // initialEntryMode: DatePickerEntryMode.input,
-                  initialDatePickerMode: DatePickerMode.year,
+                  builder: (field) {
+                    return InkWell(
+                      onTap: () {
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: Text('Pilih Tahun'),
+                                content: SizedBox(
+                                  width: 300,
+                                  height: 300,
+                                  child: YearPicker(
+                                    firstDate: DateTime(DateTime.now().year - 10, 1),
+                                    lastDate: DateTime(2050),
+                                    selectedDate: field.value ?? DateTime.now(),
+                                    onChanged: (DateTime dateTime) {
+                                      field.didChange(dateTime);
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ),
+                              );
+                            });
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('${field.value?.year ?? ''}').bodyLarge(),
+                      ),
+                    );
+                  },
                 ),
                 SizedBox(
                   width: double.infinity,
@@ -325,8 +378,10 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                       },
                     )),
                     onPressed: () async {
+                      final user = await Auth.data();
                       _formKey.currentState?.saveAndValidate();
                       if (_formKey.currentState?.validate() ?? false) {
+                        final currentLocation = await locationProvider.getCurrentLocation();
                         final data = _formKey.currentState!.value;
                         final payload = {
                           'title': widget.data() != 'none' ? 'Ubah' : 'Tambah',
@@ -336,9 +391,10 @@ class _FormSurveyPageState extends NyState<FormSurveyPage> {
                           'sungai': data['sungai'].data.id,
                           'aknop': data['aknop'].data.id,
                           'sarpra': data['sarpra'].data.id,
-                          'currentLocation': '${data['lokasi'][0][0]},${data['lokasi'][0][1]}',
+                          'currentLocation': '${currentLocation.latitude},${currentLocation.longitude}',
                           'polygon': jsonEncode({'coordinates': data['lokasi']}),
                           'year': data['year'].toString().substring(0, 4),
+                          'pelaksana': user['id'],
                         };
 
                         if (widget.data() != 'none') {

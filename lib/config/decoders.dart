@@ -1,3 +1,6 @@
+import '/app/models/home.dart';
+import '/app/models/auth.dart';
+import '/app/networking/auth_api_service.dart';
 import 'package:flutter_app/app/controllers/summary_controller.dart';
 import 'package:flutter_app/app/models/detail.dart';
 
@@ -14,7 +17,6 @@ import '/app/networking/master_api_service.dart';
 import '/app/models/base.dart';
 import '/app/controllers/home_controller.dart';
 import '/app/models/user.dart';
-import '/app/models/detail.dart';
 import '/app/networking/api_service.dart';
 import '/app/networking/transaction_api_service.dart';
 
@@ -46,6 +48,12 @@ final Map<Type, dynamic> modelDecoders = {
   Survey: (data) => Survey.fromJson(data),
   String: (data) => data,
   DetailModel: (data) => DetailModel.fromJson(data),
+
+  List<AuthModel>: (data) => List.from(data).map((json) => AuthModel.fromJson(json)).toList(),
+
+  AuthModel: (data) => AuthModel.fromJson(data),
+  List<HomeModel>: (data) => List.from(data).map((json) => HomeModel.fromJson(json)).toList(),
+  HomeModel: (data) => HomeModel.fromJson(data),
 };
 
 /* API Decoders
@@ -62,7 +70,8 @@ final Map<Type, dynamic> apiDecoders = {
   // ...
 
   MasterApiService: MasterApiService(),
-  TransactionApiService: () => TransactionApiService()
+  TransactionApiService: () => TransactionApiService(),
+  AuthApiService: AuthApiService(),
 };
 
 /* Controller Decoders

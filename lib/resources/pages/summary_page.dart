@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/detail.dart';
 import 'package:flutter_app/app/networking/transaction_api_service.dart';
+import 'package:flutter_app/app/utils/formatter.dart';
 import 'package:flutter_app/resources/pages/survey_list_page.dart';
 import 'package:flutter_app/resources/widgets/buttons/buttons.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -47,17 +48,18 @@ class _SummaryPageState extends NyState<SummaryPage> {
               Text(_detail?.stepTwo![i].bagianBangunan ?? '').bodyMedium(fontWeight: FontWeight.w600),
               SizedBox(height: 16),
               Text('Upload Bukti Masalah : '),
-              Container(
-                width: double.infinity,
-                height: 200,
-                child: Image.network(
-                  _detail!.stepTwo![i].buktiSurvey!,
+              for (var j = 0; j < _detail!.stepTwo![i].buktiSurvey!.length; j++)
+                Container(
+                  width: double.infinity,
                   height: 200,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Placeholder();
-                  },
+                  child: Image.network(
+                    _detail!.stepTwo![i].buktiSurvey![j],
+                    height: 200,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Placeholder();
+                    },
+                  ),
                 ),
-              ),
               SizedBox(height: 16),
               Text('Judul Masalah : '),
               Text(_detail?.stepTwo![i].masalah ?? '').bodyMedium(fontWeight: FontWeight.w600),
@@ -98,10 +100,14 @@ class _SummaryPageState extends NyState<SummaryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(_detail?.stepThree?[i].vTigaSubHsp?[j] ?? ''),
-                    Text(_detail?.stepThree?[i].tigaHasil?[j] ?? '').bodyMedium(fontWeight: FontWeight.w600),
+                    Text(CurrencyFormat.convertToIdr(int.parse(_detail!.stepThree![i].tigaHasil![j].toString()), 0))
+                        .bodyMedium(fontWeight: FontWeight.w600),
                     SizedBox(height: 16),
                     Text(_detail?.stepThree![i].tigaSatuan![j] ?? ''),
-                    Text('${int.parse(_detail!.stepThree![i].tigaHasil![j]) / int.parse(_detail!.stepThree![i].tigaVolume![j])}')
+                    Text(CurrencyFormat.convertToIdr(
+                            int.parse(_detail!.stepThree![i].tigaHasil![j]) /
+                                int.parse(_detail!.stepThree![i].tigaVolume![j]),
+                            0))
                         .bodyMedium(fontWeight: FontWeight.w600),
                     SizedBox(height: 16),
                   ],

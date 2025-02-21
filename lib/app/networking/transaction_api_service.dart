@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/detail.dart';
+import 'package:flutter_app/app/models/home.dart';
 import 'package:flutter_app/app/models/survey.dart';
 import '/config/decoders.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -12,9 +13,14 @@ class TransactionApiService extends NyApiService {
   @override
   String get baseUrl => getEnv('API_BASE_URL');
 
-  Future<List<Survey>?> getAllSurvey() async {
+  Future<List<Survey>?> getAllSurvey({String? title}) async {
+    String url = "/transaction/survey/all";
+    if (title != null && title != '') {
+      url += "?title=$title";
+    }
+
     return await network<List<Survey>>(
-      request: (api) => api.get('/transaction/survey/all'),
+      request: (api) => api.get(url),
     );
   }
 
@@ -48,11 +54,22 @@ class TransactionApiService extends NyApiService {
     );
   }
 
-  Future<Map<String, dynamic>?> upload(File file) async {
+  Future<String?> upload(File file) async {
     String fileName = file.path.split('/').last;
     FormData formData = FormData.fromMap({"dokumen": await MultipartFile.fromFile(file.path, filename: fileName)});
-    return await network<Map<String, dynamic>>(
+    return await network<String>(
       request: (api) => api.post('/transaction/upload/file', data: formData),
+      handleSuccess: (response) => response.data['data'],
+    );
+  }
+
+  Future<HomeModel?> getHomeData(String id) async {
+    return await network<HomeModel>(
+      request: (api) => api.get('/homepage/$id'),
+      handleSuccess: (response) {
+        final dynamic data = response.data;
+        return HomeModel.fromJson(data);
+      },
     );
   }
 }

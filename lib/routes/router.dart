@@ -32,18 +32,6 @@ import 'package:nylo_framework/nylo_framework.dart';
 
 appRouter() => nyRoutes((router) {
       router.add(LandingPage.path).initialRoute();
-
-      // Add your routes here ...
-
-      // router.add(NewPage.path, transition: PageTransitionType.fade);
-
-      // Example using grouped routes
-      // router.group(() => {
-      //   "route_guards": [AuthRouteGuard()],
-      //   "prefix": "/dashboard"
-      // }, (router) {
-      //
-      // });
       router.add(LoginPage.path);
       router.group(
           () => {
@@ -54,13 +42,13 @@ appRouter() => nyRoutes((router) {
         router.add(HomePage.path);
         router.add(SchedulePage.path);
         router.add(FormSurveyPage.path);
+        router.add(DrawingMapPage.path);
+        router.add(PenentuanNilaiPage.path);
+        router.add(IdentifikasiPage.path);
+        router.add(SummaryPage.path);
+        router.add(VolumePenentuanNilaiPage.path);
+        router.add(DetailSurveyPage.path);
       });
       router.add(NotFoundPage.path).unknownRoute();
-      router.add(DrawingMapPage.path);
-      router.add(IdentifikasiPage.path);
-      router.add(PenentuanNilaiPage.path);
-      router.add(VolumePenentuanNilaiPage.path);
-      router.add(SummaryPage.path);
       router.add(SurveyListPage.path, authenticatedRoute: true);
-      router.add(DetailSurveyPage.path);
-});
+    });

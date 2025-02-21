@@ -48,7 +48,7 @@ class _DrawingMapPageState extends NyState<DrawingMapPage> {
         ));
 
         final initialPolygons = widget.data(); // get initial polygons from navigation arguments string
-        if (initialPolygons != null) {
+        if (initialPolygons != null && initialPolygons.isNotEmpty) {
           initialPolygons.forEach((List<double> point) {
             polygonPoints.add(LatLng(point[0], point[1]));
             markers.add(Marker(
